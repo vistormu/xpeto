@@ -17,20 +17,23 @@ import (
 // ====
 type ebitenGame struct {
 	context      *ecs.Context
-	stateEngine  *state.System
+	stateEngines []state.StateSystem
 	renderEngine *render.System
 }
 
 func newGame() *ebitenGame {
 	return &ebitenGame{
 		context:      ecs.NewContext(),
-		stateEngine:  nil,
+		stateEngines: make([]state.StateSystem, 0),
 		renderEngine: nil,
 	}
 }
 
 func (g *ebitenGame) Update() error {
-	g.stateEngine.Update(g.context)
+	for _, engine := range g.stateEngines {
+		engine.Update(g.context)
+	}
+
 	g.renderEngine.Update(g.context)
 
 	return nil
@@ -59,9 +62,10 @@ type Game struct {
 	fsys fs.FS
 
 	resources []any
+	states    []any
 	systems   []struct {
 		hook  state.Hook
-		state comparable
+		state any
 		fn    any
 	}
 }
@@ -70,75 +74,74 @@ func NewGame() *Game {
 	return &Game{
 		fsys:      nil,
 		resources: []any{},
+		states:    []any{},
 		systems: []struct {
-			state  comparable
-			fnType state.StateFn
-			fn     any
+			hook  state.Hook
+			state any
+			fn    any
 		}{},
 	}
 }
 
-func (gb *Game) WithResources(resources ...any) *Game {
-	gb.resources = append(gb.resources, resources...)
-	return gb
+func (g *Game) WithResources(resources ...any) *Game {
+	g.resources = append(g.resources, resources...)
+	return g
 }
 
-func (gb *Game) WithAssets(fsys fs.FS) *Game {
-	gb.fsys = fsys
-	return gb
+func (g *Game) WithAssets(fsys fs.FS) *Game {
+	g.fsys = fsys
+	return g
 }
 
-func (gb *Game) WithSystems(fnType state.StateFn, st state.State, fn any) *Game {
-	gb.functions = append(gb.functions, struct {
-		state  state.State
-		fnType state.StateFn
-		fn     any
+func (g *Game) WithState(state any) *Game {
+	g.states = append(g.states, state)
+	return g
+}
+
+func (g *Game) WithSystems(hook state.Hook, st any, fn any) *Game {
+	g.systems = append(g.systems, struct {
+		hook  state.Hook
+		state any
+		fn    any
 	}{
-		state:  st,
-		fnType: fnType,
-		fn:     fn,
+		hook:  hook,
+		state: st,
+		fn:    fn,
 	})
-	return gb
+	return g
 }
 
-func (gb *Game) WithPlugin(plugin Plugin) *Game {
-	return gb
+func (g *Game) WithPkg(pkg Pkg) *Game {
+	return g
 }
 
-func (gb *Game) Run() {
+func (g *Game) Run() {
 	game := newGame()
 
-	// resources
-	coreResources := []any{
-		ecs.NewManager(),
-		event.NewManager(),
-		state.NewManager(),
+	// core resources
+	ecs.AddResource(game.context, ecs.NewManager())
+	ecs.AddResource(game.context, event.NewManager())
 
-		// tmp
-		render.NewManager().WithFilesystem(gb.fsys),
-	}
-
-	for _, res := range coreResources {
+	// user resources
+	for _, res := range g.resources {
 		ecs.AddResource(game.context, res)
 	}
-
-	for _, res := range gb.resources {
-		ecs.AddResource(game.context, res)
-	}
-
-	// core systems
-	game.stateEngine = state.NewSystem()
-	game.renderEngine = render.NewSystem()
 
 	// states
-	for _, st := range gb.states {
+	for _, st := range g.states {
+		ecs.AddResource(game.context, state.NewManager(st))
+		// game.stateEngines = append(game.stateEngines, state.NewSystem[]())
 	}
 
-	// state functions
-	for _, fn := range gb.functions {
-		ecs.MustResource[*state.Manager](game.context).RegisterFn(fn.state, fn.fn, fn.fnType)
-	}
-	game.stateEngine.OnEnter(game.context)
+	// render
+	// game.stateEngine = state.NewSystem()
+	// game.renderEngine = render.NewSystem()
+	//
+	// // state functions
+	// for _, fn := range g.functions {
+	// 	ecs.MustResource[*state.Manager](game.context).RegisterFn(fn.state, fn.fn, fn.fnType)
+	// }
+	// game.stateEngine.OnEnter(game.context)
 
 	ebiten.SetWindowSize(800, 600)
 	ebiten.SetWindowTitle("Xpeto Game Engine")

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io/fs"
 
-	"github.com/vistormu/xpeto/internal/errors"
-	st "github.com/vistormu/xpeto/internal/structures"
+	"github.com/vistormu/go-dsa/errors"
+	"github.com/vistormu/xpeto/internal/core"
 )
 
 type Manager struct {
@@ -13,7 +13,7 @@ type Manager struct {
 	nextId uint32
 
 	refs      map[Image]int
-	paths     *st.BiHashmap[string, Image]
+	paths     *core.BiHashmap[string, Image]
 	renderers map[Image]*Renderer
 }
 
@@ -22,7 +22,7 @@ func NewManager() *Manager {
 		fsys:      nil,
 		nextId:    1,
 		refs:      make(map[Image]int),
-		paths:     st.NewBiHashmap[string, Image](),
+		paths:     core.NewBiHashmap[string, Image](),
 		renderers: make(map[Image]*Renderer),
 	}
 }
@@ -48,7 +48,7 @@ func (m *Manager) Register(path string) Image {
 
 func (m *Manager) Load(images ...Image) {
 	if m.fsys == nil {
-		errors.New(errors.FilesystemNotSet).With("stage", "load").Print()
+		errors.New(FilesystemNotSet).With("stage", "load").Print()
 		return
 	}
 
@@ -63,7 +63,7 @@ func (m *Manager) Load(images ...Image) {
 		// get the path from the img
 		path, ok := m.paths.GetByValue(img)
 		if !ok {
-			errors.New(errors.ImageHandleNotFound).With("img", img, "stage", "load").Print()
+			errors.New(ImageHandleNotFound).With("img", img, "stage", "load").Print()
 			continue
 		}
 
@@ -82,7 +82,7 @@ func (m *Manager) Load(images ...Image) {
 
 func (m *Manager) Unload(images ...Image) {
 	if m.fsys == nil {
-		errors.New(errors.FilesystemNotSet).With("stage", "unload").Print()
+		errors.New(FilesystemNotSet).With("stage", "unload").Print()
 		return
 	}
 
@@ -90,7 +90,7 @@ func (m *Manager) Unload(images ...Image) {
 		// check if the image is loaded
 		_, ok := m.renderers[img]
 		if !ok {
-			errors.New(errors.ImageHandleNotFound).With("img", img, "stage", "unload").Print()
+			errors.New(ImageHandleNotFound).With("img", img, "stage", "unload").Print()
 			continue
 		}
 
@@ -110,7 +110,7 @@ func (m *Manager) Renderer(img Image) *Renderer {
 	renderer, ok := m.renderers[img]
 	if !ok {
 		// TODO: create default image
-		errors.New(errors.ImageHandleNotFound).With("img", img, "stage", "get").Print()
+		errors.New(ImageHandleNotFound).With("img", img, "stage", "get").Print()
 		return nil
 	}
 

@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/vistormu/xpeto/internal/core"
 	"github.com/vistormu/xpeto/internal/ecs"
 	"github.com/vistormu/xpeto/internal/engine"
 	"github.com/vistormu/xpeto/internal/event"
-	"github.com/vistormu/xpeto/internal/geometry"
 	"github.com/vistormu/xpeto/internal/state"
 	"github.com/vistormu/xpeto/pkg/audio"
-	"github.com/vistormu/xpeto/pkg/core"
 	"github.com/vistormu/xpeto/pkg/render"
+	"github.com/vistormu/xpeto/pkg/transform"
 )
 
 var NewGame = engine.NewGame
@@ -158,9 +158,7 @@ func Publish[T any](ctx *Context, data T) {
 // state
 // =====
 type (
-	State           = state.State
-	StateActivate   = state.StateActivate
-	StateDeactivate = state.StateDeactivate
+	NextState[S comparable] = state.NextState[S]
 )
 
 const (
@@ -170,21 +168,19 @@ const (
 	FixedUpdate = state.FixedUpdate
 )
 
-var InitialState = state.InitialState
-
 // ===============
 // data structures
 // ===============
 type (
-	Vector = geometry.Vector[float32]
-	Size   = geometry.Size[float32]
-	Rect   = geometry.Rect[float32]
-	Point  = geometry.Point[float32]
+	Vector = core.Vector[float32]
+	Size   = core.Size[float32]
+	Rect   = core.Rect[float32]
+	Point  = core.Point[float32]
 )
 
 // other
 type (
-	Transform = core.Transform
+	Transform = transform.Transform
 )
 
 // =====

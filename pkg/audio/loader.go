@@ -10,7 +10,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 	"github.com/hajimehoshi/ebiten/v2/audio/wav"
-	"github.com/vistormu/xpeto/internal/errors"
+
+	"github.com/vistormu/go-dsa/errors"
 )
 
 func NewContext(sampleRate int) *Context {
@@ -30,7 +31,7 @@ func NewPlayer(fsys fs.FS, path string, context *Context) (*Player, error) {
 	// read raw data from the file
 	data, err := fs.ReadFile(fsys, path)
 	if err != nil {
-		return nil, errors.New(errors.AudioPathNotFound).With("path", path).Wrap(err)
+		return nil, errors.New(AudioPathNotFound).With("path", path).Wrap(err)
 	}
 
 	// check extension for decoder
@@ -38,19 +39,19 @@ func NewPlayer(fsys fs.FS, path string, context *Context) (*Player, error) {
 
 	_, ok := decoders[ext]
 	if !ok {
-		return nil, errors.New(errors.UnsupportedAudioFormat).With("path", path, "extension", ext)
+		return nil, errors.New(UnsupportedAudioFormat).With("path", path, "extension", ext)
 	}
 
 	// decode the audio data
 	streamer, err := decoders[ext](bytes.NewReader(data))
 	if err != nil {
-		return nil, errors.New(errors.LoadAudioError).With("path", path, "extension", ext).Wrap(err)
+		return nil, errors.New(LoadAudioError).With("path", path, "extension", ext).Wrap(err)
 	}
 
 	// create a Player from the decoded stream
 	audio, err := context.NewPlayer(streamer)
 	if err != nil {
-		return nil, errors.New(errors.LoadAudioError).With("path", path, "extension", ext).Wrap(err)
+		return nil, errors.New(LoadAudioError).With("path", path, "extension", ext).Wrap(err)
 	}
 
 	return audio, nil

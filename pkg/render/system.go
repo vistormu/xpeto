@@ -5,14 +5,14 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"github.com/vistormu/xpeto/internal/core"
 	"github.com/vistormu/xpeto/internal/ecs"
-	g "github.com/vistormu/xpeto/internal/geometry"
-	"github.com/vistormu/xpeto/pkg/core"
+	"github.com/vistormu/xpeto/pkg/transform"
 )
 
 type renderableData struct {
-	position g.Vector[float32]
-	scale    g.Vector[float32]
+	position core.Vector[float32]
+	scale    core.Vector[float32]
 	renderer *Renderer
 	layer    int
 }
@@ -33,14 +33,14 @@ func (r *System) Update(ctx *ecs.Context) {
 
 	entities := em.Query(ecs.And(
 		ecs.Has[*Renderable](),
-		ecs.Has[*core.Transform](),
+		ecs.Has[*transform.Transform](),
 	))
 
 	// to renderable data
 	renderables := make([]renderableData, 0, len(entities))
 	for _, e := range entities {
 		renderable, _ := ecs.GetComponent[*Renderable](em, e)
-		transform, _ := ecs.GetComponent[*core.Transform](em, e)
+		transform, _ := ecs.GetComponent[*transform.Transform](em, e)
 
 		renderables = append(renderables, renderableData{
 			position: transform.Position,

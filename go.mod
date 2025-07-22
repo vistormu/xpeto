@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.8.8
-	github.com/vistormu/go-dsa v0.0.4
+	github.com/vistormu/go-dsa v0.0.9
 )
 
 require (

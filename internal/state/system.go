@@ -3,13 +3,13 @@ package state
 import (
 	"time"
 
+	"github.com/vistormu/xpeto/internal/core"
 	"github.com/vistormu/xpeto/internal/ecs"
 	"github.com/vistormu/xpeto/internal/event"
-	st "github.com/vistormu/xpeto/internal/structures"
 )
 
 type System[S comparable] struct {
-	requests *st.QueueArray[S]
+	requests *core.QueueArray[S]
 
 	accumulator float64
 	lastTime    time.Time
@@ -18,7 +18,7 @@ type System[S comparable] struct {
 
 func NewSystem[S comparable]() *System[S] {
 	return &System[S]{
-		requests:    st.NewQueueArray[S](),
+		requests:    core.NewQueueArray[S](),
 		accumulator: 0,
 		lastTime:    time.Now(),
 		fixedDelta:  1.0 / 60.0,
@@ -82,7 +82,7 @@ func (s *System[S]) Update(ctx *ecs.Context) {
 	fixedUpdateFns, ok := sm.fixedUpdateFns[sm.active]
 	if ok {
 		for _, updateFn := range fixedUpdateFns {
-			for i := 0; i < steps; i++ {
+			for range steps {
 				updateFn(ctx, float32(s.fixedDelta))
 			}
 		}

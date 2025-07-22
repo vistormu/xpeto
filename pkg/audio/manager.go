@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io/fs"
 
-	"github.com/vistormu/xpeto/internal/errors"
-	st "github.com/vistormu/xpeto/internal/structures"
+	"github.com/vistormu/go-dsa/errors"
+	"github.com/vistormu/xpeto/internal/core"
 )
 
 const sampleRate = 48_000
@@ -17,7 +17,7 @@ type Manager struct {
 	context *Context
 
 	refs   map[Audio]int
-	paths  *st.BiHashmap[string, Audio]
+	paths  *core.BiHashmap[string, Audio]
 	audios map[Audio]*Player
 }
 
@@ -27,7 +27,7 @@ func NewManager() *Manager {
 		context: NewContext(sampleRate),
 		nextId:  1,
 		refs:    make(map[Audio]int),
-		paths:   st.NewBiHashmap[string, Audio](),
+		paths:   core.NewBiHashmap[string, Audio](),
 		audios:  make(map[Audio]*Player),
 	}
 }
@@ -52,7 +52,7 @@ func (m *Manager) Register(path string) Audio {
 
 func (m *Manager) Load(audios ...Audio) {
 	if m.fsys == nil {
-		errors.New(errors.FilesystemNotSet).With("stage", "load").Print()
+		errors.New(FilesystemNotSet).With("stage", "load").Print()
 		return
 	}
 
@@ -67,7 +67,7 @@ func (m *Manager) Load(audios ...Audio) {
 		// get the path from the aud
 		path, ok := m.paths.GetByValue(aud)
 		if !ok {
-			errors.New(errors.AudioHandleNotFound).With("audio", aud, "stage", "load").Print()
+			errors.New(AudioHandleNotFound).With("audio", aud, "stage", "load").Print()
 			continue
 		}
 
@@ -86,7 +86,7 @@ func (m *Manager) Load(audios ...Audio) {
 
 func (m *Manager) Unload(audios ...Audio) {
 	if m.fsys == nil {
-		errors.New(errors.FilesystemNotSet).With("stage", "unload").Print()
+		errors.New(FilesystemNotSet).With("stage", "unload").Print()
 		return
 	}
 
@@ -94,7 +94,7 @@ func (m *Manager) Unload(audios ...Audio) {
 		// check if the audio is loaded
 		audio, ok := m.audios[aud]
 		if !ok {
-			errors.New(errors.AudioHandleNotFound).With("audio", aud, "stage", "unload").Print()
+			errors.New(AudioHandleNotFound).With("audio", aud, "stage", "unload").Print()
 			continue
 		}
 
@@ -115,7 +115,7 @@ func (m *Manager) Player(aud Audio) (*Player, bool) {
 	audio, ok := m.audios[aud]
 	if !ok {
 		// TODO: create default audio
-		errors.New(errors.AudioHandleNotFound).With("audio", aud, "stage", "get").Print()
+		errors.New(AudioHandleNotFound).With("audio", aud, "stage", "get").Print()
 		return nil, false
 	}
 

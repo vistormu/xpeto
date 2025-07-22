@@ -1,10 +1,10 @@
 package collision
 
 import (
-	g "github.com/vistormu/xpeto/internal/geometry"
+	"github.com/vistormu/xpeto/internal/core"
 )
 
 type Collidable struct {
-	Size   g.Size[float32]
-	Offset g.Vector[float32]
+	Size   core.Size[float32]
+	Offset core.Vector[float32]
 }

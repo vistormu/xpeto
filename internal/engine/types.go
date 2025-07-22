@@ -1,5 +1,5 @@
 package engine
 
-type Plugin interface {
+type Pkg interface {
 	Resource() any
 }

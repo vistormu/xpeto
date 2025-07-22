@@ -1,11 +1,11 @@
 package physics
 
 import (
-	g "github.com/vistormu/xpeto/internal/geometry"
+	"github.com/vistormu/xpeto/internal/core"
 )
 
 type Dynamic struct {
-	Velocity g.Vector[float32]
-	Gravity  g.Vector[float32]
+	Velocity core.Vector[float32]
+	Gravity  core.Vector[float32]
 	Mass     float32
 }

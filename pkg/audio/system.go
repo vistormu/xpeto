@@ -1,9 +1,9 @@
 package audio
 
 import (
+	"github.com/vistormu/xpeto/internal/core"
 	"github.com/vistormu/xpeto/internal/ecs"
 	"github.com/vistormu/xpeto/internal/event"
-	st "github.com/vistormu/xpeto/internal/structures"
 )
 
 type action int
@@ -23,16 +23,16 @@ type request struct {
 }
 
 type System struct {
-	active   *st.HashSet[*Player]
-	looping  *st.HashSet[*Player]
-	requests *st.QueueArray[request]
+	active   *core.HashSet[*Player]
+	looping  *core.HashSet[*Player]
+	requests *core.QueueArray[request]
 }
 
 func NewSystem() *System {
 	return &System{
-		active:   st.NewHashSet[*Player](),
-		looping:  st.NewHashSet[*Player](),
-		requests: st.NewQueueArray[request](),
+		active:   core.NewHashSet[*Player](),
+		looping:  core.NewHashSet[*Player](),
+		requests: core.NewQueueArray[request](),
 	}
 }
 

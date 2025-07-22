@@ -3,20 +3,20 @@ package ecs
 import (
 	"reflect"
 
-	st "github.com/vistormu/xpeto/internal/structures"
+	"github.com/vistormu/xpeto/internal/core"
 )
 
 type Manager struct {
 	nextId     uint32
 	storage    map[reflect.Type]map[Entity]any
-	population *st.HashSet[Entity]
+	population *core.HashSet[Entity]
 }
 
 func NewManager() *Manager {
 	return &Manager{
 		nextId:     1,
 		storage:    make(map[reflect.Type]map[Entity]any),
-		population: st.NewHashSet[Entity](),
+		population: core.NewHashSet[Entity](),
 	}
 }
 

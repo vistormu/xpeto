@@ -1,4 +1,4 @@
-package geometry
+package core
 
 import (
 	"github.com/vistormu/go-dsa/constraints"
