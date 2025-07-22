@@ -16,7 +16,7 @@ type System[S comparable] struct {
 	fixedDelta  float64
 }
 
-func NewSystem[S comparable]() *System[S] {
+func NewSystem[S comparable](initial S) *System[S] {
 	return &System[S]{
 		requests:    core.NewQueueArray[S](),
 		accumulator: 0,

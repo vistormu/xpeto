@@ -12,13 +12,15 @@ const (
 	OnTransition
 	Update
 	FixedUpdate
+	Draw
 )
 
-type OnEnterFn = func(*ecs.Context)
-type OnExitFn = func(*ecs.Context)
-type OnTransitionFn = func(*ecs.Context)
+type ContextFn = func(*ecs.Context)
 type UpdateFn = func(*ecs.Context, float32)
-type FixedUpdateFn = func(*ecs.Context, float32)
+
+type StateFn interface {
+	ContextFn | UpdateFn
+}
 
 type StateManager interface {
 	Register(hook Hook, state any, fn any)

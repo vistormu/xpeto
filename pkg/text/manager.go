@@ -1,4 +1,4 @@
-package font
+package text
 
 import (
 	"io/fs"

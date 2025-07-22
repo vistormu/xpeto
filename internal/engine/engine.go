@@ -9,7 +9,6 @@ import (
 	"github.com/vistormu/xpeto/internal/ecs"
 	"github.com/vistormu/xpeto/internal/event"
 	"github.com/vistormu/xpeto/internal/state"
-	"github.com/vistormu/xpeto/pkg/render"
 )
 
 // ====
@@ -18,14 +17,12 @@ import (
 type ebitenGame struct {
 	context      *ecs.Context
 	stateEngines []state.StateSystem
-	renderEngine *render.System
 }
 
 func newGame() *ebitenGame {
 	return &ebitenGame{
 		context:      ecs.NewContext(),
 		stateEngines: make([]state.StateSystem, 0),
-		renderEngine: nil,
 	}
 }
 
@@ -34,13 +31,10 @@ func (g *ebitenGame) Update() error {
 		engine.Update(g.context)
 	}
 
-	g.renderEngine.Update(g.context)
-
 	return nil
 }
 
 func (g *ebitenGame) Draw(screen *ebiten.Image) {
-	g.renderEngine.Draw(screen)
 }
 
 func (g *ebitenGame) Layout(w, h int) (int, int) {
@@ -62,7 +56,6 @@ type Game struct {
 	fsys fs.FS
 
 	resources []any
-	states    []any
 	systems   []struct {
 		hook  state.Hook
 		state any
@@ -74,7 +67,6 @@ func NewGame() *Game {
 	return &Game{
 		fsys:      nil,
 		resources: []any{},
-		states:    []any{},
 		systems: []struct {
 			hook  state.Hook
 			state any
@@ -93,11 +85,6 @@ func (g *Game) WithAssets(fsys fs.FS) *Game {
 	return g
 }
 
-func (g *Game) WithState(state any) *Game {
-	g.states = append(g.states, state)
-	return g
-}
-
 func (g *Game) WithSystems(hook state.Hook, st any, fn any) *Game {
 	g.systems = append(g.systems, struct {
 		hook  state.Hook
@@ -108,6 +95,7 @@ func (g *Game) WithSystems(hook state.Hook, st any, fn any) *Game {
 		state: st,
 		fn:    fn,
 	})
+
 	return g
 }
 
@@ -127,21 +115,23 @@ func (g *Game) Run() {
 		ecs.AddResource(game.context, res)
 	}
 
-	// states
-	for _, st := range g.states {
-		ecs.AddResource(game.context, state.NewManager(st))
-		// game.stateEngines = append(game.stateEngines, state.NewSystem[]())
+	// systems
+	registered := make(map[any]state.StateManager)
+	for _, s := range g.systems {
+		sm, ok := registered[s.state]
+		if !ok {
+			sm = state.NewManager(s.state)
+		}
+
+		sm.Register(s.hook, s.state, s.fn)
 	}
 
-	// render
-	// game.stateEngine = state.NewSystem()
-	// game.renderEngine = render.NewSystem()
-	//
-	// // state functions
-	// for _, fn := range g.functions {
-	// 	ecs.MustResource[*state.Manager](game.context).RegisterFn(fn.state, fn.fn, fn.fnType)
-	// }
-	// game.stateEngine.OnEnter(game.context)
+	for st, sm := range registered {
+		ecs.AddResource(game.context, sm)
+		ss := state.NewSystem(st)
+		ss.OnEnter(game.context)
+		game.stateEngines = append(game.stateEngines, ss)
+	}
 
 	ebiten.SetWindowSize(800, 600)
 	ebiten.SetWindowTitle("Xpeto Game Engine")

@@ -1,4 +1,4 @@
-package font
+package text
 
 import (
 	"github.com/vistormu/xpeto/internal/core"
