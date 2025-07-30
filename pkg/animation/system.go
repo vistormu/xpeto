@@ -1,28 +1,22 @@
-package animation
+package ani
 
 import (
+	"github.com/vistormu/xpeto/internal/core"
 	"github.com/vistormu/xpeto/internal/ecs"
 	"github.com/vistormu/xpeto/pkg/render"
 )
 
-type System struct {
-}
+func Update(ctx *core.Context, dt float32) {
+	w, _ := core.GetResource[*ecs.World](ctx)
 
-func NewSystem() *System {
-	return &System{}
-}
-
-func (s *System) Update(ctx *ecs.Context, dt float32) {
-	em, _ := ecs.GetResource[*ecs.Manager](ctx)
-
-	entities := em.Query(ecs.And(
+	entities := w.Query(ecs.And(
 		ecs.Has[*Animation](),
 		ecs.Has[*render.Renderable](),
 	))
 
 	for _, e := range entities {
-		anim, _ := ecs.GetComponent[*Animation](em, e)
-		renderable, _ := ecs.GetComponent[*render.Renderable](em, e)
+		anim, _ := ecs.GetComponent[*Animation](w, e)
+		renderable, _ := ecs.GetComponent[*render.Renderable](w, e)
 
 		// Advance elapsed time
 		anim.Elapsed += dt

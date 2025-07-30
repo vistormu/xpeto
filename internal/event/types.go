@@ -1,7 +1,6 @@
 package event
 
-import (
-	"github.com/vistormu/xpeto/internal/core"
-)
-
-type Event = core.Handle[any]
+type Event struct {
+	Id      uint32
+	Version uint32
+}

@@ -1,4 +1,4 @@
-package animation
+package ani
 
 import (
 	"github.com/vistormu/xpeto/pkg/render"

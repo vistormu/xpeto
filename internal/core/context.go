@@ -1,4 +1,4 @@
-package ecs
+package core
 
 import (
 	"fmt"
@@ -16,17 +16,30 @@ func NewContext() *Context {
 }
 
 func AddResource[T any](ctx *Context, resource T) {
-	key := reflect.TypeOf(resource)
-	ctx.resources[key] = resource
+	ctx.resources[reflect.TypeFor[T]()] = resource
+}
+
+func AddResourceByType(ctx *Context, resource any, type_ reflect.Type) {
+	if type_ == nil {
+		panic("type cannot be nil")
+	}
+	ctx.resources[type_] = resource
 }
 
 func GetResource[T any](ctx *Context) (T, bool) {
-	res, ok := ctx.resources[reflect.TypeOf((*T)(nil)).Elem()]
+	v, ok := ctx.resources[reflect.TypeFor[T]()]
 	if !ok {
 		var zero T
 		return zero, false
 	}
-	return res.(T), true
+
+	out, ok := v.(T)
+	if !ok {
+		var zero T
+		return zero, false
+	}
+
+	return out, true
 }
 
 func MustResource[T any](ctx *Context) T {

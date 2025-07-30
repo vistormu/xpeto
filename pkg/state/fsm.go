@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type Manager[S comparable] struct {
+type Fsm[S comparable] struct {
 	active          S
 	previous        S
 	onEnterFns      map[S][]ContextFn
@@ -14,8 +14,8 @@ type Manager[S comparable] struct {
 	fixedUpdateFns  map[S][]UpdateFn
 }
 
-func NewManager[S comparable](initial S) *Manager[S] {
-	return &Manager[S]{
+func NewFsm[S comparable](initial S) *Fsm[S] {
+	return &Fsm[S]{
 		active:          initial,
 		previous:        initial,
 		onEnterFns:      make(map[S][]ContextFn),
@@ -26,7 +26,7 @@ func NewManager[S comparable](initial S) *Manager[S] {
 	}
 }
 
-func (m *Manager[S]) Register(hook Hook, state S, fn any) {
+func (fsm *Fsm[S]) Register(hook Hook, state S, fn any) {
 	switch hook {
 	case OnEnter:
 		function, ok := fn.(ContextFn)
@@ -34,7 +34,7 @@ func (m *Manager[S]) Register(hook Hook, state S, fn any) {
 			fmt.Println("OnEnter")
 			return
 		}
-		m.onEnterFns[state] = append(m.onEnterFns[state], function)
+		fsm.onEnterFns[state] = append(fsm.onEnterFns[state], function)
 
 	case OnExit:
 		function, ok := fn.(ContextFn)
@@ -42,7 +42,7 @@ func (m *Manager[S]) Register(hook Hook, state S, fn any) {
 			fmt.Println("OnExit")
 			return
 		}
-		m.onExitFns[state] = append(m.onExitFns[state], function)
+		fsm.onExitFns[state] = append(fsm.onExitFns[state], function)
 
 	case Update:
 		function, ok := fn.(UpdateFn)
@@ -50,7 +50,7 @@ func (m *Manager[S]) Register(hook Hook, state S, fn any) {
 			fmt.Println("Update")
 			return
 		}
-		m.updateFns[state] = append(m.updateFns[state], function)
+		fsm.updateFns[state] = append(fsm.updateFns[state], function)
 
 	case FixedUpdate:
 		function, ok := fn.(UpdateFn)
@@ -58,6 +58,6 @@ func (m *Manager[S]) Register(hook Hook, state S, fn any) {
 			fmt.Println("FixedUpdate")
 			return
 		}
-		m.fixedUpdateFns[state] = append(m.fixedUpdateFns[state], function)
+		fsm.fixedUpdateFns[state] = append(fsm.fixedUpdateFns[state], function)
 	}
 }

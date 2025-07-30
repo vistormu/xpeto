@@ -3,12 +3,12 @@ package state
 import (
 	"time"
 
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/ecs"
 	"github.com/vistormu/xpeto/internal/event"
 )
 
-type System[S comparable] struct {
+type Scheduler[S comparable] struct {
 	requests *core.QueueArray[S]
 
 	accumulator float64
@@ -16,8 +16,8 @@ type System[S comparable] struct {
 	fixedDelta  float64
 }
 
-func NewSystem[S comparable](initial S) *System[S] {
-	return &System[S]{
+func NewScheduler[S comparable](initial S) *Scheduler[S] {
+	return &Scheduler[S]{
 		requests:    core.NewQueueArray[S](),
 		accumulator: 0,
 		lastTime:    time.Now(),
@@ -25,15 +25,15 @@ func NewSystem[S comparable](initial S) *System[S] {
 	}
 }
 
-func (s *System[S]) OnEnter(ctx *ecs.Context) {
-	em := ecs.MustResource[*event.Manager](ctx)
+func (s *Scheduler[S]) OnEnter(ctx *core.Context) {
+	em := core.MustResource[*event.Bus](ctx)
 
 	event.Subscribe(em, func(data NextState[S]) {
 		s.requests.Enqueue(data.State)
 	})
 }
 
-func (s *System[S]) Update(ctx *ecs.Context) {
+func (s *Scheduler[S]) Update(ctx *core.Context) {
 	// update time
 	now := time.Now()
 	frameTime := now.Sub(s.lastTime).Seconds()
@@ -49,7 +49,7 @@ func (s *System[S]) Update(ctx *ecs.Context) {
 		s.accumulator -= float64(steps) * s.fixedDelta
 	}
 
-	sm := ecs.MustResource[*Manager[S]](ctx)
+	sm := core.MustResource[*Fsm[S]](ctx)
 	for !s.requests.IsEmpty() {
 		state, _ := s.requests.Dequeue()
 
@@ -95,3 +95,5 @@ func (s *System[S]) Update(ctx *ecs.Context) {
 		}
 	}
 }
+
+func (s *Scheduler[S]) Draw(screen *ebiten.Image) {}

@@ -1,14 +1,14 @@
 package ecs
 
 type Filter interface {
-	Match(m *Manager, e Entity) bool
+	Match(w *World, e Entity) bool
 }
 
 // has
 type has[T any] struct{}
 
-func (h has[T]) Match(m *Manager, e Entity) bool {
-	_, ok := GetComponent[T](m, e)
+func (h has[T]) Match(w *World, e Entity) bool {
+	_, ok := GetComponent[T](w, e)
 	return ok
 }
 func Has[T any]() Filter { return has[T]{} }
@@ -16,15 +16,15 @@ func Has[T any]() Filter { return has[T]{} }
 // not
 type not struct{ f Filter }
 
-func (n not) Match(m *Manager, e Entity) bool { return !n.f.Match(m, e) }
-func Not(f Filter) Filter                     { return not{f} }
+func (n not) Match(w *World, e Entity) bool { return !n.f.Match(w, e) }
+func Not(f Filter) Filter                   { return not{f} }
 
 // and
 type and struct{ fs []Filter }
 
-func (a and) Match(m *Manager, e Entity) bool {
+func (a and) Match(w *World, e Entity) bool {
 	for _, f := range a.fs {
-		if !f.Match(m, e) {
+		if !f.Match(w, e) {
 			return false
 		}
 	}
@@ -35,9 +35,9 @@ func And(fs ...Filter) Filter { return and{fs} }
 // or
 type or struct{ fs []Filter }
 
-func (o or) Match(m *Manager, e Entity) bool {
+func (o or) Match(w *World, e Entity) bool {
 	for _, f := range o.fs {
-		if f.Match(m, e) {
+		if f.Match(w, e) {
 			return true
 		}
 	}

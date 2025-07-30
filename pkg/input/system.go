@@ -2,7 +2,7 @@ package input
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/vistormu/xpeto/internal/ecs"
+	"github.com/vistormu/xpeto/internal/core"
 	"github.com/vistormu/xpeto/internal/event"
 )
 
@@ -20,13 +20,9 @@ func NewActionSystem() *ActionSystem {
 	}
 }
 
-func (s *ActionSystem) OnLoad(ctx *ecs.Context)                  {}
-func (s *ActionSystem) OnUnload(ctx *ecs.Context)                {}
-func (s *ActionSystem) FixedUpdate(ctx *ecs.Context, dt float32) {}
-
-func (s *ActionSystem) Update(ctx *ecs.Context, dt float32) {
-	am, _ := ecs.GetResource[*Manager](ctx)
-	em, _ := ecs.GetResource[*event.Manager](ctx)
+func (s *ActionSystem) Update(ctx *core.Context, dt float32) {
+	am, _ := core.GetResource[*Manager](ctx)
+	em, _ := core.GetResource[*event.Bus](ctx)
 
 	for action, bindings := range am.Mappings() {
 		state, ok := s.states[action]

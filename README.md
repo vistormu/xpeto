@@ -4,9 +4,14 @@
 
 <a href="https://github.com/vistormu/xpeto" target="_blank" title="go to the repo"><img width="196px" alt="xpeto logo" src="/docs/logo.png"></a>
 
-# xpeto<br>a simple ECS 2D game engine for Go
+# xpeto<br>a silly ECS 2D game engine in Go for silly games
 
-_xpeto_ is a simple 2D game engine written in Go, following the ECS architecture.
+_xpeto_ is a simple 2D game engine written in Go to help you create your silly games quickly and easily
+
+- entity-component-system (ECS) architecture
+- state-driven game loop
+- consistent API
+- extensible by design
 
 <br>
 
@@ -18,7 +23,16 @@ _xpeto_ is a simple 2D game engine written in Go, following the ECS architecture
 </div>
 
 > [!WARNING]
-> this project is functional but still in development, so expect some bugs and missing features
+> i say that it is a "silly" game engine because i have made it for fun, and it will never be a full-featured game engine like bevy or godot
+> i am not a game developer, so use this engine at your own risk and expect bugs and missing features
+
+## overview
+
+_xpeto_ aims to be a code-first game engine, taking advantage of Go's simplicity and performance
+
+the engine is built around [ebitengine](https://ebitengine.org/), a lightweight 2D game library for Go, and takes inspiration from the [bevy](https://bevyengine.org/) game engine
+
+## installation
 
 [go_version_img]: https://img.shields.io/badge/Go-1.24+-00ADD8?style=for-the-badge&logo=go
 [go_dev_url]: https://go.dev/

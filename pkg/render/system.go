@@ -27,9 +27,9 @@ func NewSystem() *System {
 	}
 }
 
-func (r *System) Update(ctx *ecs.Context) {
-	em, _ := ecs.GetResource[*ecs.Manager](ctx)
-	im, _ := ecs.GetResource[*Manager](ctx)
+func (r *System) Update(ctx *core.Context) {
+	em, _ := core.GetResource[*ecs.World](ctx)
+	im, _ := core.GetResource[*Manager](ctx)
 
 	entities := em.Query(ecs.And(
 		ecs.Has[*Renderable](),

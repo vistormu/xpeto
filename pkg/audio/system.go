@@ -2,7 +2,6 @@ package audio
 
 import (
 	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/ecs"
 	"github.com/vistormu/xpeto/internal/event"
 )
 
@@ -36,8 +35,8 @@ func NewSystem() *System {
 	}
 }
 
-func (s *System) OnLoad(ctx *ecs.Context) {
-	em, _ := ecs.GetResource[*event.Manager](ctx)
+func (s *System) OnLoad(ctx *core.Context) {
+	em, _ := core.GetResource[*event.Bus](ctx)
 
 	event.Subscribe(em, func(event AudioPlay) {
 		s.requests.Enqueue(request{
@@ -70,8 +69,8 @@ func (s *System) OnLoad(ctx *ecs.Context) {
 	})
 }
 
-func (s *System) Update(ctx *ecs.Context, dt float32) {
-	am, _ := ecs.GetResource[*Manager](ctx)
+func (s *System) Update(ctx *core.Context, dt float32) {
+	am, _ := core.GetResource[*Library](ctx)
 
 	for !s.requests.IsEmpty() {
 		req, _ := s.requests.Dequeue()
