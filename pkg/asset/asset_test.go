@@ -60,7 +60,7 @@ func TestAssetLoading(t *testing.T) {
 	Load[txtType, mockAsset](as)
 
 	// tick once
-	Update(ctx, 0)
+	Update(ctx)
 	_, ok := core.GetResource[mockAsset](ctx)
 	if !ok {
 		t.Fatal("Expected mockAsset to be loaded, but it was not found in the context")
@@ -82,7 +82,7 @@ loop:
 	for {
 		select {
 		case <-fps.C:
-			Update(ctx, 0)
+			Update(ctx)
 		case <-done:
 			t.Log("test successful")
 			break loop

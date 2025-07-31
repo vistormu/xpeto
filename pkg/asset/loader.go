@@ -8,7 +8,7 @@ import (
 	"github.com/vistormu/xpeto/internal/event"
 )
 
-func Update(ctx *core.Context, dt float32) {
+func Update(ctx *core.Context) {
 	as, ok := core.GetResource[*Server](ctx)
 	if !ok {
 		return

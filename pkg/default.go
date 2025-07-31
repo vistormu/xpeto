@@ -2,17 +2,14 @@ package pkg
 
 import (
 	"github.com/vistormu/xpeto/internal/core"
+
 	"github.com/vistormu/xpeto/pkg/asset"
+	"github.com/vistormu/xpeto/pkg/time"
 )
 
-type DefaultPlugins struct{}
-
-func (dp *DefaultPlugins) Resources() []any {
-	return []any{}
+func DefaultPlugins() []core.Plugin {
+	return []core.Plugin{
+		new(asset.AssetPlugin),
+		new(time.TimePlugin),
+	}
 }
-
-func (dp *DefaultPlugins) Systems() []core.System {
-	return []core.System{}
-}
-
-func (dp *DefaultPlugins) Build(ctx *core.Context) {}

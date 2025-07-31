@@ -5,13 +5,13 @@ import (
 )
 
 type Scheduler struct {
-	schedulesByStage map[Stage][]*Schedule
-	stageOrder       []Stage
+	schedulesByStage map[core.Stage][]*Schedule
+	stageOrder       []core.Stage
 }
 
-func NewScheduler(order []Stage) *Scheduler {
+func NewScheduler(order []core.Stage) *Scheduler {
 	return &Scheduler{
-		schedulesByStage: make(map[Stage][]*Schedule),
+		schedulesByStage: make(map[core.Stage][]*Schedule),
 		stageOrder:       order,
 	}
 }

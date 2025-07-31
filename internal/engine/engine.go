@@ -27,7 +27,7 @@ func (g *ebitenGame) Update() error {
 }
 
 func (g *ebitenGame) Draw(screen *ebiten.Image) {
-	g.drawScheduler.Run(g.context)
+	// g.drawScheduler.Run(g.context)
 }
 
 func (g *ebitenGame) Layout(w, h int) (int, int) {
@@ -38,41 +38,22 @@ func (g *ebitenGame) Layout(w, h int) (int, int) {
 // builder
 // =======
 type Game struct {
-	resources []any
-	settings  Settings
-	schedules []*scheduler.Schedule
-	pkgs      []Pkg
+	game *ebitenGame
+
+	settings Settings
+	plugins  []core.Plugin
 }
 
 func NewGame() *Game {
 	return &Game{
-		resources: make([]any, 0),
-		settings:  Settings{},
-		schedules: make([]*scheduler.Schedule, 0),
-		pkgs:      make([]Pkg, 0),
+		game:     nil,
+		settings: Settings{},
+		plugins:  make([]core.Plugin, 0),
 	}
 }
 
-func (g *Game) WithResources(resources ...any) *Game {
-	g.resources = append(g.resources, resources...)
-	return g
-}
-
-func (g *Game) WithSystem(name string, stage scheduler.Stage, run ecs.System, condition func(*core.Context) bool) *Game {
-	g.schedules = append(g.schedules, &scheduler.Schedule{
-		Name:      name,
-		Stage:     stage,
-		System:    run,
-		Before:    nil, // no before systems
-		After:     nil, // no after systems
-		Condition: condition,
-	})
-
-	return g
-}
-
-func (g *Game) WithPkgs(pkg ...Pkg) *Game {
-	g.pkgs = append(g.pkgs, pkg...)
+func (g *Game) WithPlugins(plugin ...core.Plugin) *Game {
+	g.plugins = append(g.plugins, plugin...)
 	return g
 }
 
@@ -81,50 +62,54 @@ func (g *Game) WithSettings(settings Settings) *Game {
 	return g
 }
 
-func (g *Game) Run() error {
-	game := new(ebitenGame)
-	game.context = core.NewContext()
-	game.scheduler = scheduler.NewScheduler(scheduler.UpdateStages())
-	startupScheduler := scheduler.NewScheduler(scheduler.StartupStages())
+func (g *Game) build() *Game {
+	g.game = new(ebitenGame)
+	g.game.context = core.NewContext()
+	g.game.scheduler = scheduler.NewScheduler(core.UpdateStages())
+	startupScheduler := scheduler.NewScheduler(core.StartupStages())
 
 	// core resources
-	core.AddResource(game.context, ecs.NewWorld())
-	core.AddResource(game.context, event.NewBus())
-
-	// user resources
-	for _, res := range g.resources {
-		core.AddResource(game.context, res)
-	}
-
-	// add schedules
-	for _, sch := range g.schedules {
-		if slices.Contains(scheduler.StartupStages(), sch.Stage) {
-			startupScheduler.WithSchedule(sch)
-		} else {
-			game.scheduler.WithSchedule(sch)
-		}
-	}
+	core.AddResource(g.game.context, ecs.NewWorld())
+	core.AddResource(g.game.context, event.NewBus())
 
 	// add packages
-	for _, pkg := range g.pkgs {
-		g.resources = append(g.resources, pkg.Resources()...)
-
-		for _, sch := range pkg.Schedules() {
-			if slices.Contains(scheduler.StartupStages(), sch.Stage) {
-				startupScheduler.WithSchedule(sch)
-			} else {
-				game.scheduler.WithSchedule(sch)
-			}
+	for _, plugin := range g.plugins {
+		sb := new(core.ScheduleBuilder)
+		plugin.Build(g.game.context, sb)
+		if slices.Contains(core.StartupStages(), sb.Stage) {
+			startupScheduler.WithSchedule(&scheduler.Schedule{
+				Name:      sb.Name,
+				Stage:     sb.Stage,
+				System:    sb.System,
+				Before:    sb.Before,
+				After:     sb.After,
+				Condition: sb.Condition,
+			})
+		} else {
+			g.game.scheduler.WithSchedule(&scheduler.Schedule{
+				Name:      sb.Name,
+				Stage:     sb.Stage,
+				System:    sb.System,
+				Before:    sb.Before,
+				After:     sb.After,
+				Condition: sb.Condition,
+			})
 		}
-
-		pkg.Build(game.context)
 	}
+
+	startupScheduler.Run(g.game.context)
 
 	// settings
 	ebiten.SetWindowSize(g.settings.WindowWidth, g.settings.WindowHeight)
 	ebiten.SetWindowTitle(g.settings.WindowTitle)
 
-	err := ebiten.RunGame(game)
+	return g
+}
+
+func (g *Game) Run() error {
+	g.build()
+
+	err := ebiten.RunGame(g.game)
 	if err != nil {
 		return err
 	}

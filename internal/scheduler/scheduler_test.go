@@ -13,23 +13,23 @@ func TestStages(t *testing.T) {
 	ctx := core.NewContext()
 	core.AddResource(ctx, &[]string{})
 
-	stages := StartupStages()
-	stages = append(stages, UpdateStages()...)
+	stages := core.StartupStages()
+	stages = append(stages, core.UpdateStages()...)
 
 	scheduler := NewScheduler(stages).
-		WithSchedule(&Schedule{Name: "preStartup", Stage: PreStartup, System: preStartupSystem}).
-		WithSchedule(&Schedule{Name: "startup", Stage: Startup, System: startupSystem}).
-		WithSchedule(&Schedule{Name: "postStartup", Stage: PostStartup, System: postStartupSystem}).
-		WithSchedule(&Schedule{Name: "first", Stage: First, System: firstSystem}).
-		WithSchedule(&Schedule{Name: "preUpdate", Stage: PreUpdate, System: preUpdateSystem}).
-		WithSchedule(&Schedule{Name: "fixedFirst", Stage: FixedFirst, System: fixedFirstSystem}).
-		WithSchedule(&Schedule{Name: "fixedPreUpdate", Stage: FixedPreUpdate, System: fixedPreUpdateSystem}).
-		WithSchedule(&Schedule{Name: "fixedUpdate", Stage: FixedUpdate, System: fixedUpdateSystem}).
-		WithSchedule(&Schedule{Name: "fixedPostUpdate", Stage: FixedPostUpdate, System: fixedPostUpdateSystem}).
-		WithSchedule(&Schedule{Name: "fixedLast", Stage: FixedLast, System: fixedLastSystem}).
-		WithSchedule(&Schedule{Name: "update", Stage: Update, System: updateSystem}).
-		WithSchedule(&Schedule{Name: "postUpdate", Stage: PostUpdate, System: postUpdateSystem}).
-		WithSchedule(&Schedule{Name: "last", Stage: Last, System: lastSystem})
+		WithSchedule(&Schedule{Name: "preStartup", Stage: core.PreStartup, System: preStartupSystem}).
+		WithSchedule(&Schedule{Name: "startup", Stage: core.Startup, System: startupSystem}).
+		WithSchedule(&Schedule{Name: "postStartup", Stage: core.PostStartup, System: postStartupSystem}).
+		WithSchedule(&Schedule{Name: "first", Stage: core.First, System: firstSystem}).
+		WithSchedule(&Schedule{Name: "preUpdate", Stage: core.PreUpdate, System: preUpdateSystem}).
+		WithSchedule(&Schedule{Name: "fixedFirst", Stage: core.FixedFirst, System: fixedFirstSystem}).
+		WithSchedule(&Schedule{Name: "fixedPreUpdate", Stage: core.FixedPreUpdate, System: fixedPreUpdateSystem}).
+		WithSchedule(&Schedule{Name: "fixedUpdate", Stage: core.FixedUpdate, System: fixedUpdateSystem}).
+		WithSchedule(&Schedule{Name: "fixedPostUpdate", Stage: core.FixedPostUpdate, System: fixedPostUpdateSystem}).
+		WithSchedule(&Schedule{Name: "fixedLast", Stage: core.FixedLast, System: fixedLastSystem}).
+		WithSchedule(&Schedule{Name: "update", Stage: core.Update, System: updateSystem}).
+		WithSchedule(&Schedule{Name: "postUpdate", Stage: core.PostUpdate, System: postUpdateSystem}).
+		WithSchedule(&Schedule{Name: "last", Stage: core.Last, System: lastSystem})
 
 	if len(scheduler.schedulesByStage) != 13 {
 		t.Fatalf("expected 13 stages, got %d", len(scheduler.schedulesByStage))
@@ -63,6 +63,13 @@ func TestStages(t *testing.T) {
 			t.Errorf("expected system %d to be %s, got %s", i, expectedOrder[i], sys)
 		}
 	}
+}
+
+func TestEmptyScheduler(t *testing.T) {
+	ctx := core.NewContext()
+	scheduler := NewScheduler(core.StartupStages())
+
+	scheduler.Run(ctx)
 }
 
 // =======
