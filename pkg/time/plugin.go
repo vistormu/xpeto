@@ -4,11 +4,12 @@ import (
 	"github.com/vistormu/xpeto/internal/core"
 )
 
-type TimePlugin struct{}
-
-func (tp *TimePlugin) Build(ctx *core.Context, sb *core.ScheduleBuilder) {
+func TimePlugin(ctx *core.Context, sb *core.ScheduleBuilder) {
+	// resources
 	core.AddResource(ctx, new(Time))
 
+	// systems
 	clock := NewClock()
-	sb.WithSystem("time", core.PreUpdate, clock.Update)
+	sb.NewSchedule().
+		WithSystem("time", core.PreUpdate, clock.Update)
 }

@@ -4,9 +4,11 @@ import (
 	"github.com/vistormu/xpeto/internal/core"
 )
 
-type AssetPlugin struct{}
-
-func (ap *AssetPlugin) Build(ctx *core.Context, sb *core.ScheduleBuilder) {
+func AssetPlugin(ctx *core.Context, sb *core.ScheduleBuilder) {
+	// resources
 	core.AddResource(ctx, NewServer())
-	sb.WithSystem("asset_loader", core.First, Update)
+
+	// systems
+	sb.NewSchedule().
+		WithSystem("asset_loader", core.First, Update)
 }

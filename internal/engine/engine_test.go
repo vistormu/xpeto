@@ -18,7 +18,7 @@ func TestPkgs(t *testing.T) {
 
 	game := NewGame().
 		WithSettings(settings).
-		WithPlugins(new(asset.AssetPlugin)).
+		WithPlugins(asset.AssetPlugin).
 		build()
 
 	as, ok := core.GetResource[*asset.Server](game.game.context)

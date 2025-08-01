@@ -11,8 +11,4 @@ type Entity struct {
 
 type Component = any
 
-type Archetype interface {
-	Components() []Component
-}
-
 type System = func(ctx *core.Context)

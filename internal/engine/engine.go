@@ -27,7 +27,9 @@ func (g *ebitenGame) Update() error {
 }
 
 func (g *ebitenGame) Draw(screen *ebiten.Image) {
-	// g.drawScheduler.Run(g.context)
+	core.AddResource(g.context, screen)
+	g.drawScheduler.Run(g.context)
+	core.RemoveResource[*ebiten.Image](g.context)
 }
 
 func (g *ebitenGame) Layout(w, h int) (int, int) {
@@ -66,6 +68,7 @@ func (g *Game) build() *Game {
 	g.game = new(ebitenGame)
 	g.game.context = core.NewContext()
 	g.game.scheduler = scheduler.NewScheduler(core.UpdateStages())
+	g.game.drawScheduler = scheduler.NewScheduler(core.DrawStages())
 	startupScheduler := scheduler.NewScheduler(core.StartupStages())
 
 	// core resources
@@ -75,25 +78,25 @@ func (g *Game) build() *Game {
 	// add packages
 	for _, plugin := range g.plugins {
 		sb := new(core.ScheduleBuilder)
-		plugin.Build(g.game.context, sb)
-		if slices.Contains(core.StartupStages(), sb.Stage) {
-			startupScheduler.WithSchedule(&scheduler.Schedule{
-				Name:      sb.Name,
-				Stage:     sb.Stage,
-				System:    sb.System,
-				Before:    sb.Before,
-				After:     sb.After,
-				Condition: sb.Condition,
-			})
-		} else {
-			g.game.scheduler.WithSchedule(&scheduler.Schedule{
-				Name:      sb.Name,
-				Stage:     sb.Stage,
-				System:    sb.System,
-				Before:    sb.Before,
-				After:     sb.After,
-				Condition: sb.Condition,
-			})
+		plugin(g.game.context, sb)
+
+		for _, s := range sb.Schedules {
+			schedule := &scheduler.Schedule{
+				Name:      s.Name,
+				Stage:     s.Stage,
+				System:    s.System,
+				Before:    s.Before,
+				After:     s.After,
+				Condition: s.Condition,
+			}
+
+			if slices.Contains(core.UpdateStages(), s.Stage) {
+				g.game.scheduler.WithSchedule(schedule)
+			} else if slices.Contains(core.DrawStages(), s.Stage) {
+				g.game.drawScheduler.WithSchedule(schedule)
+			} else if slices.Contains(core.StartupStages(), s.Stage) {
+				startupScheduler.WithSchedule(schedule)
+			}
 		}
 	}
 

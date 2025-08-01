@@ -1,6 +1,9 @@
 package core
 
-type ScheduleBuilder struct {
+// ========
+// schedule
+// ========
+type Schedule struct {
 	Name      string
 	Stage     Stage
 	System    func(*Context)
@@ -9,7 +12,7 @@ type ScheduleBuilder struct {
 	Condition func(*Context) bool
 }
 
-func (sb *ScheduleBuilder) WithSystem(name string, stage Stage, system func(*Context)) *ScheduleBuilder {
+func (sb *Schedule) WithSystem(name string, stage Stage, system func(*Context)) *Schedule {
 	sb.Name = name
 	sb.Stage = stage
 	sb.System = system
@@ -17,21 +20,40 @@ func (sb *ScheduleBuilder) WithSystem(name string, stage Stage, system func(*Con
 	return sb
 }
 
-func (sb *ScheduleBuilder) RunIf(condition func(*Context) bool) *ScheduleBuilder {
+func (sb *Schedule) RunIf(condition func(*Context) bool) *Schedule {
 	sb.Condition = condition
 	return sb
 }
 
-func (sb *ScheduleBuilder) RunBefore(systems ...string) *ScheduleBuilder {
+func (sb *Schedule) RunBefore(systems ...string) *Schedule {
 	sb.Before = append(sb.Before, systems...)
 	return sb
 }
 
-func (sb *ScheduleBuilder) RunAfter(systems ...string) *ScheduleBuilder {
+func (sb *Schedule) RunAfter(systems ...string) *Schedule {
 	sb.After = append(sb.After, systems...)
 	return sb
 }
 
-type Plugin interface {
-	Build(*Context, *ScheduleBuilder)
+// =========
+// scheduler
+// =========
+type ScheduleBuilder struct {
+	Schedules []*Schedule
 }
+
+func (sb *ScheduleBuilder) NewSchedule() *Schedule {
+	s := &Schedule{
+		Name:   "",
+		Stage:  PreUpdate,
+		System: nil,
+	}
+
+	sb.Schedules = append(sb.Schedules, s)
+	return s
+}
+
+// ======
+// plugin
+// ======
+type Plugin func(*Context, *ScheduleBuilder)

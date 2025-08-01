@@ -49,3 +49,7 @@ func MustResource[T any](ctx *Context) T {
 	}
 	return res
 }
+
+func RemoveResource[T any](ctx *Context) {
+	delete(ctx.resources, reflect.TypeFor[T]())
+}

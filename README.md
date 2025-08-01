@@ -8,11 +8,6 @@
 
 _xpeto_ is a simple 2D game engine written in Go to help you create your silly games quickly and easily
 
-- entity-component-system (ECS) architecture
-- state-driven game loop
-- consistent API
-- extensible by design
-
 <br>
 
 [![go version][go_version_img]][go_dev_url]
@@ -28,9 +23,13 @@ _xpeto_ is a simple 2D game engine written in Go to help you create your silly g
 
 ## overview
 
-_xpeto_ aims to be a code-first game engine, taking advantage of Go's simplicity and performance
+_xpeto_ is a simple 2D game engine written in Go, built on top of the [ebitengine](https://ebitengine.org/) library and inspired by the [bevy](https://bevyengine.org/) game engine.
 
-the engine is built around [ebitengine](https://ebitengine.org/), a lightweight 2D game library for Go, and takes inspiration from the [bevy](https://bevyengine.org/) game engine
+it is designed to be a simple code-first game engine, with the following features:
+
+- entity-component-system (ECS) architecture
+- consistent API
+- extensible by design with plugins
 
 ## installation
 

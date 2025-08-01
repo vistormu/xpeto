@@ -19,6 +19,8 @@ const (
 	Update
 	PostUpdate
 	Last
+
+	Draw
 )
 
 func StartupStages() []Stage {
@@ -41,5 +43,11 @@ func UpdateStages() []Stage {
 		Update,
 		PostUpdate,
 		Last,
+	}
+}
+
+func DrawStages() []Stage {
+	return []Stage{
+		Draw,
 	}
 }

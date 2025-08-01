@@ -67,14 +67,6 @@ func (s *Server) AddLoader(extension string, loader LoaderFn) {
 	s.loaders[extension] = loader
 }
 
-func (s *Server) GetLoader(extension string) (LoaderFn, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	loader, ok := s.loaders[extension]
-	return loader, ok
-}
-
 // ======
 // assets
 // ======

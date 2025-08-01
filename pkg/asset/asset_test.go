@@ -3,7 +3,6 @@ package asset
 import (
 	"io"
 	"io/fs"
-	"reflect"
 	"sync"
 	"testing"
 	"testing/fstest"
@@ -94,18 +93,12 @@ loop:
 	// check that the assets exist in the context and that the state is Loaded
 	mockAssets, _ := core.GetResource[mockAsset](ctx)
 
-	t.Log(mockAssets)
-
 	state1 := as.GetState(mockAssets.Asset1)
 	state2 := as.GetState(mockAssets.Asset2)
 
 	if state1 != Loaded || state2 != Loaded {
 		t.Fatalf("assets do not appear as loaded!: %d, %d", state1, state2)
 	}
-
-	t.Log(as.assetStore[reflect.TypeFor[txtType]()])
-	t.Log(mockAssets.Asset1)
-	t.Log(mockAssets.Asset2)
 
 	// check that the assets are loaded
 	asset1, ok := GetAsset[txtType](as, mockAssets.Asset1)

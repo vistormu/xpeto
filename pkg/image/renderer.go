@@ -1,4 +1,4 @@
-package render
+package image
 
 import (
 	"sort"
@@ -7,31 +7,36 @@ import (
 
 	"github.com/vistormu/xpeto/internal/core"
 	"github.com/vistormu/xpeto/internal/ecs"
+
+	"github.com/vistormu/xpeto/pkg/asset"
 	"github.com/vistormu/xpeto/pkg/transform"
 )
 
 type renderableData struct {
 	position core.Vector[float32]
 	scale    core.Vector[float32]
-	renderer *Renderer
 	layer    int
+	image    *Image
 }
 
-type System struct {
+type Renderer struct {
 	renderables []renderableData
 }
 
-func NewSystem() *System {
-	return &System{
+func NewRenderer() *Renderer {
+	return &Renderer{
 		renderables: make([]renderableData, 0),
 	}
 }
 
-func (r *System) Update(ctx *core.Context) {
-	em, _ := core.GetResource[*ecs.World](ctx)
-	im, _ := core.GetResource[*Manager](ctx)
+func (r *Renderer) Update(ctx *core.Context) {
+	w := core.MustResource[*ecs.World](ctx)
+	as, ok := core.GetResource[*asset.Server](ctx)
+	if !ok {
+		return
+	}
 
-	entities := em.Query(ecs.And(
+	entities := w.Query(ecs.And(
 		ecs.Has[*Renderable](),
 		ecs.Has[*transform.Transform](),
 	))
@@ -39,14 +44,19 @@ func (r *System) Update(ctx *core.Context) {
 	// to renderable data
 	renderables := make([]renderableData, 0, len(entities))
 	for _, e := range entities {
-		renderable, _ := ecs.GetComponent[*Renderable](em, e)
-		transform, _ := ecs.GetComponent[*transform.Transform](em, e)
+		renderable, _ := ecs.GetComponent[*Renderable](w, e)
+		transform, _ := ecs.GetComponent[*transform.Transform](w, e)
+
+		img, ok := asset.GetAsset[*Image](as, renderable.Image)
+		if !ok {
+			continue
+		}
 
 		renderables = append(renderables, renderableData{
 			position: transform.Position,
 			scale:    transform.Scale,
-			renderer: im.Renderer(renderable.Image),
 			layer:    renderable.Layer,
+			image:    img,
 		})
 	}
 
@@ -59,12 +69,17 @@ func (r *System) Update(ctx *core.Context) {
 	r.renderables = renderables
 }
 
-func (r *System) Draw(screen *Renderer) {
+func (r *Renderer) Draw(ctx *core.Context) {
+	screen, ok := core.GetResource[*ebiten.Image](ctx)
+	if !ok {
+		return
+	}
+
 	for _, rend := range r.renderables {
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Scale(float64(rend.scale.X), float64(rend.scale.Y))
 		opts.GeoM.Translate(float64(rend.position.X), float64(rend.position.Y))
 
-		screen.DrawImage(rend.renderer, opts)
+		screen.DrawImage(rend.image.Img, opts)
 	}
 }

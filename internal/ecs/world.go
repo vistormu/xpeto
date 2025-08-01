@@ -23,17 +23,11 @@ func NewWorld() *World {
 // ========
 // entities
 // ========
-func (w *World) Create(archetype Archetype) Entity {
+func (w *World) Create() Entity {
 	entity := Entity{Id: w.nextId}
 	w.nextId++
 
 	w.population.Add(entity)
-
-	if archetype != nil {
-		for _, component := range archetype.Components() {
-			AddComponent(w, entity, component)
-		}
-	}
 
 	return entity
 }

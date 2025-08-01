@@ -10,6 +10,9 @@ import (
 	"github.com/vistormu/xpeto/internal/scheduler"
 
 	"github.com/vistormu/xpeto/pkg"
+	"github.com/vistormu/xpeto/pkg/asset"
+	"github.com/vistormu/xpeto/pkg/image"
+	"github.com/vistormu/xpeto/pkg/transform"
 )
 
 // ============================================
@@ -43,6 +46,7 @@ type Plugin = core.Plugin
 type ScheduleBuilder = core.ScheduleBuilder
 
 // geometry
+type Vector = core.Vector[float32]
 
 // ===
 // ecs
@@ -50,7 +54,6 @@ type ScheduleBuilder = core.ScheduleBuilder
 // types
 type Entity = ecs.Entity
 type Component = ecs.Component
-type Archetype = ecs.Archetype
 type System = ecs.System
 
 // filters
@@ -75,9 +78,9 @@ func Not(filter Filter) Filter {
 // world
 type World = ecs.World
 
-func CreateEntity(ctx *Context, archetype Archetype) Entity {
+func CreateEntity(ctx *Context) Entity {
 	w := MustResource[*World](ctx)
-	return w.Create(archetype)
+	return w.Create()
 }
 
 func DestroyEntity(ctx *Context, entity Entity) {
@@ -180,3 +183,83 @@ const (
 // these re-exports are part of opt-in packages
 // ============================================
 var DefaultPlugins = pkg.DefaultPlugins
+
+// =====
+// asset
+// =====
+// types
+type Handle = asset.Handle
+type LoadState = asset.LoadState
+type LoaderFn = asset.LoaderFn
+
+const (
+	NotFound = asset.NotFound
+	Loading  = asset.Loading
+	Loaded   = asset.Loaded
+	Failed   = asset.Failed
+)
+
+// server
+type AssetServer = asset.Server
+
+func AddAssetLoader(ctx *Context, ext string, loader LoaderFn) {
+	as, ok := core.GetResource[*asset.Server](ctx)
+	if !ok {
+		return
+	}
+	as.AddLoader(ext, loader)
+}
+
+func LoadAsset[T any, B any](ctx *Context) {
+	as, ok := core.GetResource[*AssetServer](ctx)
+	if !ok {
+		return
+	}
+	asset.Load[T, B](as)
+}
+
+func GetAsset[T any](ctx *Context, handle Handle) (T, bool) {
+	as, ok := core.GetResource[*AssetServer](ctx)
+	if !ok {
+		var zero T
+		return zero, false
+	}
+	return asset.GetAsset[T](as, handle)
+}
+
+func GetState(ctx *Context, handle Handle) LoadState {
+	as, ok := core.GetResource[*AssetServer](ctx)
+	if !ok {
+		return NotFound
+	}
+	return as.GetState(handle)
+}
+
+// event
+type AssetEvent = asset.AssetEvent
+type AssetEventKind = asset.AssetEventKind
+
+const (
+	AssetAdded    = asset.Added
+	AssetModified = asset.Modified
+	AssetRemoved  = asset.Removed
+)
+
+// plugin
+var AssetPlugin = asset.AssetPlugin
+
+// =====
+// image
+// =====
+// types
+type Image = image.Image
+
+// components
+type Renderable = image.Renderable
+
+// =========
+// transform
+// =========
+
+// components
+type Transform = transform.Transform
