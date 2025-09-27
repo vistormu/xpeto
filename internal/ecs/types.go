@@ -4,11 +4,6 @@ import (
 	"github.com/vistormu/xpeto/internal/core"
 )
 
-type Entity struct {
-	Id      uint32
-	Version uint32
-}
-
+type Entity = core.Id
 type Component = any
-
 type System = func(ctx *core.Context)

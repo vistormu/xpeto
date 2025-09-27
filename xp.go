@@ -12,6 +12,7 @@ import (
 	"github.com/vistormu/xpeto/pkg"
 	"github.com/vistormu/xpeto/pkg/asset"
 	"github.com/vistormu/xpeto/pkg/image"
+	"github.com/vistormu/xpeto/pkg/text"
 	"github.com/vistormu/xpeto/pkg/transform"
 )
 
@@ -255,7 +256,16 @@ var AssetPlugin = asset.AssetPlugin
 type Image = image.Image
 
 // components
-type Renderable = image.Renderable
+type Sprite = image.Sprite
+
+// =====
+// fonts
+// =====
+// types
+type Font = text.Font
+
+// components
+type Text = text.Text
 
 // =========
 // transform

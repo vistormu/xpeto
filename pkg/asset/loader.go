@@ -37,7 +37,7 @@ func Update(ctx *core.Context) {
 				return
 			}
 
-			content, err := r.LoaderFn(file, r.Path)
+			content, err := r.LoaderFn(file)
 			as.completed <- loadResult{r, content, err}
 		}(req)
 	}

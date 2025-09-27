@@ -1,11 +1,11 @@
-package ani
+package animation
 
 import (
-	"github.com/vistormu/xpeto/pkg/render"
+	"github.com/vistormu/xpeto/pkg/asset"
 )
 
 type Animation struct {
-	Frames   []render.Image
+	Frames   []asset.Handle
 	Duration float32
 	Elapsed  float32
 	Current  uint64

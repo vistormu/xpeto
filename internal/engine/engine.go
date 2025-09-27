@@ -33,7 +33,7 @@ func (g *ebitenGame) Draw(screen *ebiten.Image) {
 }
 
 func (g *ebitenGame) Layout(w, h int) (int, int) {
-	return 800, 600
+	return 320, 180
 }
 
 // =======

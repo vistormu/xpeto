@@ -4,9 +4,9 @@
 
 <a href="https://github.com/vistormu/xpeto" target="_blank" title="go to the repo"><img width="196px" alt="xpeto logo" src="/docs/logo.png"></a>
 
-# xpeto<br>a silly ECS 2D game engine in Go for silly games
+# xpeto<br>an ECS 2D game engine in Go for small games
 
-_xpeto_ is a simple 2D game engine written in Go to help you create your silly games quickly and easily
+_xpeto_ is a simple code-first 2D game engine for Go to help you create small games in your favorite language!
 
 <br>
 
@@ -18,20 +18,37 @@ _xpeto_ is a simple 2D game engine written in Go to help you create your silly g
 </div>
 
 > [!WARNING]
-> i say that it is a "silly" game engine because i have made it for fun, and it will never be a full-featured game engine like bevy or godot
-> i am not a game developer, so use this engine at your own risk and expect bugs and missing features
+> this is a personal project under active development
+> expect breaking changes, slow development and bugs
 
 ## overview
 
-_xpeto_ is a simple 2D game engine written in Go, built on top of the [ebitengine](https://ebitengine.org/) library and inspired by the [bevy](https://bevyengine.org/) game engine.
+_xpeto_ is built on top of the [ebitengine](https://ebitengine.org/) library and heavily inspired by the [bevy](https://bevyengine.org/) game engine
 
-it is designed to be a simple code-first game engine, with the following features:
-
-- entity-component-system (ECS) architecture
-- consistent API
-- extensible by design with plugins
+- it follows the modern [ECS](https://github.com/SanderMertens/ecs-faq) architecture
+- the API is ddesigned to be simple and beautiful with the help of [Go's generics](https://go.dev/doc/tutorial/generics)
+- extensible and modular by design, inspired by [Bevy's plugin system](https://bevy.org/learn/quick-start/getting-started/plugins/)
 
 ## installation
+
+```sh
+go get github.com/vistormu/xpeto
+```
+
+you can also install via `go install` and use some useful commands
+
+```sh
+go install github.com/vistormu/xpeto
+```
+
+
+## documentation
+
+
+## contributing
+
+
+## license
 
 [go_version_img]: https://img.shields.io/badge/Go-1.24+-00ADD8?style=for-the-badge&logo=go
 [go_dev_url]: https://go.dev/

@@ -4,7 +4,9 @@ import (
 	"github.com/vistormu/xpeto/pkg/asset"
 )
 
-type Renderable struct {
+type Sprite struct {
 	Image asset.Handle
 	Layer int
+	FlipX bool
+	FlipY bool
 }

@@ -1,3 +1,3 @@
-package ani
+package animation
 
 type SpriteSheet any

@@ -1,18 +1,16 @@
-package image
+package text
 
 import (
 	"github.com/vistormu/xpeto/internal/core"
 	"github.com/vistormu/xpeto/pkg/asset"
 )
 
-func ImagePlugin(ctx *core.Context, sb *core.ScheduleBuilder) {
+func TextPlugin(ctx *core.Context, sb *core.ScheduleBuilder) {
 	// loader
 	as, ok := core.GetResource[*asset.Server](ctx)
 	if !ok {
 		return
 	}
 
-	as.AddLoader(".png", loadImage)
-	as.AddLoader(".jpeg", loadImage)
-	as.AddLoader(".jpg", loadImage)
+	as.AddLoader(".ttf", loadText)
 }

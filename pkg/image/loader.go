@@ -9,7 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-func LoadImage(reader io.Reader, path string) (any, error) {
+func loadImage(reader io.Reader) (any, error) {
 	data, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err

@@ -84,7 +84,7 @@ loop:
 	// add the renderable component to the world
 	entity := w.Create()
 
-	ecs.AddComponent(w, entity, &Renderable{
+	ecs.AddComponent(w, entity, &Sprite{
 		Image: mockBundle.DefaultImage,
 		Layer: 0,
 	})
@@ -125,7 +125,7 @@ func prepareMockContext() *core.Context {
 
 	// asset server
 	server := asset.NewServer()
-	server.AddLoader(".png", LoadImage)
+	server.AddLoader(".png", loadImage)
 	server.SetFilesystem(fsys)
 	core.AddResource(ctx, server)
 

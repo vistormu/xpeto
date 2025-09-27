@@ -1,9 +1,8 @@
-package ani
+package animation
 
 import (
 	"github.com/vistormu/xpeto/internal/core"
 	"github.com/vistormu/xpeto/internal/ecs"
-	"github.com/vistormu/xpeto/pkg/render"
 )
 
 func Update(ctx *core.Context, dt float32) {

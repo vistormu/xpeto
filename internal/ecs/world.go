@@ -7,7 +7,7 @@ import (
 )
 
 type World struct {
-	nextId     uint32
+	nextId     int
 	storage    map[reflect.Type]map[Entity]any
 	population *core.HashSet[Entity]
 }
@@ -24,7 +24,7 @@ func NewWorld() *World {
 // entities
 // ========
 func (w *World) Create() Entity {
-	entity := Entity{Id: w.nextId}
+	entity := Entity{Number: w.nextId}
 	w.nextId++
 
 	w.population.Add(entity)

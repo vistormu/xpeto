@@ -3,15 +3,14 @@ package asset
 import (
 	"io"
 	"reflect"
+
+	"github.com/vistormu/xpeto/internal/core"
 )
 
 // ======
 // handle
 // ======
-type Handle struct {
-	Id      uint32
-	Version uint32
-}
+type Handle = core.Id
 
 // ==========
 // load state
@@ -28,7 +27,7 @@ const (
 // ======
 // loader
 // ======
-type LoaderFn func(reader io.Reader, path string) (any, error)
+type LoaderFn func(reader io.Reader) (any, error)
 
 // ============
 // load request

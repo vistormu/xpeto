@@ -20,7 +20,7 @@ type Server struct {
 	mu   sync.RWMutex
 	fsys fs.FS
 
-	nextId      uint32
+	nextId      int
 	freeHandles *core.QueueArray[Handle]
 
 	registered *core.BiHashmap[string, Handle]
@@ -94,12 +94,12 @@ func Load[T any, B any](s *Server) {
 		handle, err := s.freeHandles.Dequeue()
 		if err == nil {
 			handle = Handle{
-				Id:      handle.Id,
+				Number:  handle.Number,
 				Version: handle.Version + 1,
 			}
 		} else {
 			handle = Handle{
-				Id:      s.nextId,
+				Number:  s.nextId,
 				Version: 1,
 			}
 			s.nextId++
