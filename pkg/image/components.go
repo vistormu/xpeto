@@ -6,7 +6,6 @@ import (
 
 type Sprite struct {
 	Image asset.Handle
-	Layer int
 	FlipX bool
 	FlipY bool
 }

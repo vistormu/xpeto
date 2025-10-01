@@ -1,18 +1,22 @@
 package xp
 
 import (
-	"reflect"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/vistormu/xpeto/internal/core"
 	"github.com/vistormu/xpeto/internal/ecs"
-	"github.com/vistormu/xpeto/internal/engine"
 	"github.com/vistormu/xpeto/internal/event"
-	"github.com/vistormu/xpeto/internal/scheduler"
+	"github.com/vistormu/xpeto/internal/game"
+	"github.com/vistormu/xpeto/internal/schedule"
 
 	"github.com/vistormu/xpeto/pkg"
 	"github.com/vistormu/xpeto/pkg/asset"
+	"github.com/vistormu/xpeto/pkg/graphics"
 	"github.com/vistormu/xpeto/pkg/image"
+	"github.com/vistormu/xpeto/pkg/input"
+	"github.com/vistormu/xpeto/pkg/render"
 	"github.com/vistormu/xpeto/pkg/text"
+	"github.com/vistormu/xpeto/pkg/time"
 	"github.com/vistormu/xpeto/pkg/transform"
 )
 
@@ -30,9 +34,7 @@ func AddResource[T any](ctx *Context, resource T) {
 	core.AddResource(ctx, resource)
 }
 
-func AddResourceByType(ctx *Context, resource any, type_ reflect.Type) {
-	core.AddResourceByType(ctx, resource, type_)
-}
+var AddResourceByType = core.AddResourceByType
 
 func GetResource[T any](ctx *Context) (T, bool) {
 	return core.GetResource[T](ctx)
@@ -41,10 +43,6 @@ func GetResource[T any](ctx *Context) (T, bool) {
 func MustResource[T any](ctx *Context) T {
 	return core.MustResource[T](ctx)
 }
-
-// plugin
-type Plugin = core.Plugin
-type ScheduleBuilder = core.ScheduleBuilder
 
 // geometry
 type Vector = core.Vector[float32]
@@ -64,17 +62,9 @@ func Has[T any]() Filter {
 	return ecs.Has[T]()
 }
 
-func And(filters ...Filter) Filter {
-	return ecs.And(filters...)
-}
-
-func Or(filters ...Filter) Filter {
-	return ecs.Or(filters...)
-}
-
-func Not(filter Filter) Filter {
-	return ecs.Not(filter)
-}
+var And = ecs.And
+var Or = ecs.Or
+var Not = ecs.Not
 
 // world
 type World = ecs.World
@@ -114,18 +104,19 @@ func RemoveComponent[T any](ctx *Context, entity Entity) {
 	ecs.RemoveComponent[T](w, entity)
 }
 
-// ======
-// engine
-// ======
+// ====
+// game
+// ====
 // settings
-type GameSettings = engine.Settings
+type GameSettings = game.Settings
 
 // engine
-type Game = engine.Game
+type Game = game.Game
 
-func NewGame() *Game {
-	return engine.NewGame()
-}
+var NewGame = game.NewGame
+
+// plugin
+type Plugin game.Plugin
 
 // =====
 // event
@@ -155,30 +146,77 @@ func Publish[T any](ctx *Context, data T) {
 // scheduler
 // =========
 // types
-type Stage = core.Stage
-type Schedule = scheduler.Schedule
+type Stage = schedule.Stage
+type Schedule = schedule.Schedule
+type Scheduler = schedule.Scheduler
+type State[T comparable] = schedule.State[T]
+type NextState[T comparable] = schedule.NextState[T]
 
-const (
-	PreStartup  = core.PreStartup
-	Startup     = core.Startup
-	PostStartup = core.PostStartup
+var PreStartup = schedule.PreStartup
+var Startup = schedule.Startup
+var PostStartup = schedule.PostStartup
 
-	First     = core.First
-	PreUpdate = core.PreUpdate
+var First = schedule.First
+var PreUpdate = schedule.PreUpdate
 
-	FixedFirst      = core.FixedFirst
-	FixedPreUpdate  = core.FixedPreUpdate
-	FixedUpdate     = core.FixedUpdate
-	FixedPostUpdate = core.FixedPostUpdate
-	FixedLast       = core.FixedLast
+func OnExit[T comparable](state T) Stage {
+	return schedule.OnExit(state)
+}
+func OnTransition[T comparable](from, to T) Stage {
+	return schedule.OnTransition(from, to)
+}
+func OnEnter[T comparable](state T) Stage {
+	return schedule.OnEnter(state)
+}
 
-	Update     = core.Update
-	PostUpdate = core.PostUpdate
-	Last       = core.Last
-)
+var FixedFirst = schedule.FixedFirst
+var FixedPreUpdate = schedule.FixedPreUpdate
+var FixedUpdate = schedule.FixedUpdate
+var FixedPostUpdate = schedule.FixedPostUpdate
+var FixedLast = schedule.FixedLast
+
+var Update = schedule.Update
+var PostUpdate = schedule.PostUpdate
+var Last = schedule.Last
+
+var PreDraw = schedule.PreDraw
+var Draw = schedule.Draw
+var PostDraw = schedule.PostDraw
+
+// conditions
+func InState[T comparable](s T) func(*core.Context) bool {
+	return schedule.InState(s)
+}
 
 // scheduler
-// type Scheduler = scheduler.Scheduler
+func AddStateMachine[T comparable](sch *Scheduler, initial T) {
+	schedule.AddStateMachine(sch, initial)
+}
+
+var AddSystem = schedule.AddSystem
+
+// states
+func CurrentState[T comparable](ctx *Context) T {
+	current, ok := core.GetResource[*State[T]](ctx)
+	if !ok {
+		var zero T
+		return zero
+	}
+
+	return current.Get()
+}
+
+func SetNextState[T comparable](ctx *Context, s T) {
+	next, ok := core.GetResource[*NextState[T]](ctx)
+	if !ok {
+		return
+	}
+
+	next.Set(s)
+}
+
+// events
+type EventStateTransition[T comparable] = schedule.EventStateTransition[T]
 
 // ============================================
 // these re-exports are part of opt-in packages
@@ -259,6 +297,31 @@ type Image = image.Image
 type Sprite = image.Sprite
 
 // =====
+// input
+// =====
+// types
+type Key = input.Key
+type Keyboard = input.Keyboard
+type MouseButton = input.MouseButton
+type Mouse = input.Mouse
+type GamepadButton = input.GamepadButton
+type GamepadAxis = input.GamepadAxis
+type Gamepad = input.Gamepad
+
+const (
+	KeyA Key = ebiten.KeyA
+	KeyB Key = ebiten.KeyB
+
+	KeyEnter Key = ebiten.KeyEnter
+)
+
+// events
+type KeyJustPressed = input.KeyJustPressed
+type KeyJustReleased = input.KeyJustReleased
+type MouseButtonJustPressed = input.MouseButtonJustPressed
+type MouseButtonJustReleased = input.MouseButtonJustReleased
+
+// =====
 // fonts
 // =====
 // types
@@ -266,6 +329,23 @@ type Font = text.Font
 
 // components
 type Text = text.Text
+
+// ========
+// graphics
+// ========
+type Circle = graphics.Circle
+
+// ======
+// render
+// ======
+// components
+type Renderable = render.Renderable
+
+// ====
+// time
+// ====
+// types
+type Time = time.Time
 
 // =========
 // transform

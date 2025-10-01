@@ -10,5 +10,5 @@ type Text struct {
 	Font    asset.Handle
 	Content string
 	Color   color.Color
-	Layer   int
+	Size    float64
 }

@@ -1,14 +1,9 @@
 package text
 
 import (
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/opentype"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 type Font struct {
-	Font    *opentype.Font
-	Face    font.Face
-	Size    float64
-	DPI     float64
-	Hinting font.Hinting
+	Face *text.GoTextFaceSource
 }

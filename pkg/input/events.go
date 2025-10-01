@@ -1,13 +1,17 @@
 package input
 
-type ActionMaintain struct {
-	Action Action
+type KeyJustPressed struct {
+	Key Key
 }
 
-type ActionPress struct {
-	Action Action
+type KeyJustReleased struct {
+	Key Key
 }
 
-type ActionRelease struct {
-	Action Action
+type MouseButtonJustPressed struct {
+	Button MouseButton
+}
+
+type MouseButtonJustReleased struct {
+	Button MouseButton
 }

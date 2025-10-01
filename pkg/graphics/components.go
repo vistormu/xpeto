@@ -1,6 +1,15 @@
 package graphics
 
-type Path struct{}
-type Shape struct{}
-type Fill struct{}
-type Circle struct{}
+import "image/color"
+
+type Circle struct {
+	Radius    int
+	Fill      color.Color
+	Stroke    color.Color
+	Linewidth int
+}
+
+type Rect struct {
+	Width  float32
+	Height float32
+}

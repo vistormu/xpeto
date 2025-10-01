@@ -2,14 +2,12 @@ package render
 
 import (
 	"github.com/vistormu/xpeto/internal/core"
+	"github.com/vistormu/xpeto/internal/schedule"
 )
 
-func RenderPlugin(ctx *core.Context, sb *core.ScheduleBuilder) {
+func RenderPlugin(ctx *core.Context, sch *schedule.Scheduler) {
 	// system
 	renderer := NewRenderer()
-	sb.NewSchedule().
-		WithSystem("renderer_update", core.PostUpdate, renderer.Update)
-
-	sb.NewSchedule().
-		WithSystem("renderer_draw", core.Draw, renderer.Draw)
+	schedule.AddSystem(sch, schedule.PostUpdate, renderer.Update)
+	schedule.AddSystem(sch, schedule.Draw, renderer.Draw)
 }

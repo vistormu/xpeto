@@ -2,13 +2,13 @@ package asset
 
 import (
 	"github.com/vistormu/xpeto/internal/core"
+	"github.com/vistormu/xpeto/internal/schedule"
 )
 
-func AssetPlugin(ctx *core.Context, sb *core.ScheduleBuilder) {
+func AssetPlugin(ctx *core.Context, sch *schedule.Scheduler) {
 	// resources
 	core.AddResource(ctx, NewServer())
 
 	// systems
-	sb.NewSchedule().
-		WithSystem("asset_loader", core.First, Update)
+	schedule.AddSystem(sch, schedule.First, Update)
 }

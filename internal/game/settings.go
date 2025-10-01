@@ -1,4 +1,4 @@
-package engine
+package game
 
 type Settings struct {
 	WindowWidth  int
