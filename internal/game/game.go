@@ -12,6 +12,11 @@ import (
 // ====
 // game
 // ====
+type Layout struct {
+	Width  int
+	Height int
+}
+
 type ebitenGame struct {
 	context   *core.Context
 	scheduler *schedule.Scheduler
@@ -30,7 +35,8 @@ func (g *ebitenGame) Draw(screen *ebiten.Image) {
 }
 
 func (g *ebitenGame) Layout(w, h int) (int, int) {
-	return 320, 180
+	layout := core.MustResource[*Layout](g.context)
+	return layout.Width, layout.Height
 }
 
 // =======
@@ -70,6 +76,7 @@ func (g *Game) build() *Game {
 	// core resources
 	core.AddResource(g.game.context, ecs.NewWorld())
 	core.AddResource(g.game.context, event.NewBus())
+	core.AddResource(g.game.context, &Layout{g.settings.VirtualWidth, g.settings.VirtualHeight})
 
 	// plugins
 	for _, plugin := range g.plugins {

@@ -1,6 +1,3 @@
 package render
 
-type Renderable struct {
-	Layer   int
-	Visible bool
-}
+type Hidden struct{}

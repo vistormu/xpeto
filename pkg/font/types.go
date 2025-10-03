@@ -1,4 +1,4 @@
-package text
+package font
 
 import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"

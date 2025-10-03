@@ -6,8 +6,9 @@ import (
 )
 
 func RenderPlugin(ctx *core.Context, sch *schedule.Scheduler) {
+	// resources
+	core.AddResource(ctx, NewExtractor())
+
 	// system
-	renderer := NewRenderer()
-	schedule.AddSystem(sch, schedule.PostUpdate, renderer.Update)
-	schedule.AddSystem(sch, schedule.Draw, renderer.Draw)
+	schedule.AddSystem(sch, schedule.Draw, draw)
 }

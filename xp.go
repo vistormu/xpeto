@@ -11,13 +11,15 @@ import (
 
 	"github.com/vistormu/xpeto/pkg"
 	"github.com/vistormu/xpeto/pkg/asset"
-	"github.com/vistormu/xpeto/pkg/graphics"
+	"github.com/vistormu/xpeto/pkg/font"
 	"github.com/vistormu/xpeto/pkg/image"
 	"github.com/vistormu/xpeto/pkg/input"
 	"github.com/vistormu/xpeto/pkg/render"
+	"github.com/vistormu/xpeto/pkg/sprite"
 	"github.com/vistormu/xpeto/pkg/text"
 	"github.com/vistormu/xpeto/pkg/time"
 	"github.com/vistormu/xpeto/pkg/transform"
+	"github.com/vistormu/xpeto/pkg/vector"
 )
 
 // ============================================
@@ -109,6 +111,7 @@ func RemoveComponent[T any](ctx *Context, entity Entity) {
 // ====
 // settings
 type GameSettings = game.Settings
+type Layout = game.Layout
 
 // engine
 type Game = game.Game
@@ -294,7 +297,7 @@ var AssetPlugin = asset.AssetPlugin
 type Image = image.Image
 
 // components
-type Sprite = image.Sprite
+type Sprite = sprite.Sprite
 
 // =====
 // input
@@ -325,15 +328,21 @@ type MouseButtonJustReleased = input.MouseButtonJustReleased
 // fonts
 // =====
 // types
-type Font = text.Font
+type Font = font.Font
 
 // components
 type Text = text.Text
+type Align = text.Align
+
+var AlignStart = text.AlignStart
+var AlignCenter = text.AlignCenter
+var AlignEnd = text.AlignEnd
 
 // ========
 // graphics
 // ========
-type Circle = graphics.Circle
+type Circle = vector.Circle
+type Rect = vector.Rect
 
 // ======
 // render

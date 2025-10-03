@@ -9,3 +9,10 @@ type Transform struct {
 	Scale    core.Vector[float32]
 	Rotation float32
 }
+
+// TODO: implement this correctly
+type GlobalTransform struct {
+	Position core.Vector[float32]
+	Scale    core.Vector[float32]
+	Rotation float32
+}
