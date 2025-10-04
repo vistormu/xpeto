@@ -9,14 +9,12 @@ import (
 type Clock struct {
 	accumulator float64
 	lastTime    time.Time
-	fixedDelta  float64
 }
 
 func NewClock() *Clock {
 	return &Clock{
 		accumulator: 0,
 		lastTime:    time.Now(),
-		fixedDelta:  1.0 / 60.0,
 	}
 }
 
@@ -46,5 +44,4 @@ func (c *Clock) Update(ctx *core.Context) {
 	}
 
 	t.Frame++
-
 }

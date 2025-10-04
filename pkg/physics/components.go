@@ -1,11 +1,27 @@
 package physics
 
-import (
-	"github.com/vistormu/xpeto/internal/core"
+type BodyType uint8
+
+const (
+	Static BodyType = iota
+	Kinematic
+	Dynamic
 )
 
-type Dynamic struct {
-	Velocity core.Vector[float32]
-	Gravity  core.Vector[float32]
-	Mass     float32
+type RigidBody struct {
+	Type BodyType
+	Mass float64
+}
+
+type Aabb struct {
+	HalfWidth  float64
+	HalfHeight float64
+}
+
+type Velocity struct {
+	X, Y float64
+}
+
+type GravityScale struct {
+	Value float64
 }

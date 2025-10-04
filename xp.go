@@ -150,6 +150,7 @@ func Publish[T any](ctx *Context, data T) {
 // =========
 // types
 type Stage = schedule.Stage
+type ConditionFn = schedule.ConditionFn
 type Schedule = schedule.Schedule
 type Scheduler = schedule.Scheduler
 type State[T comparable] = schedule.State[T]
@@ -187,9 +188,11 @@ var Draw = schedule.Draw
 var PostDraw = schedule.PostDraw
 
 // conditions
-func InState[T comparable](s T) func(*core.Context) bool {
+func InState[T comparable](s T) ConditionFn {
 	return schedule.InState(s)
 }
+
+var Once = schedule.Once
 
 // scheduler
 func AddStateMachine[T comparable](sch *Scheduler, initial T) {
@@ -277,6 +280,10 @@ func GetState(ctx *Context, handle Handle) LoadState {
 	return as.GetState(handle)
 }
 
+func IsLoaded[B any]() ConditionFn {
+	return asset.IsLoaded[B]()
+}
+
 // event
 type AssetEvent = asset.AssetEvent
 type AssetEventKind = asset.AssetEventKind
@@ -315,7 +322,12 @@ const (
 	KeyA Key = ebiten.KeyA
 	KeyB Key = ebiten.KeyB
 
-	KeyEnter Key = ebiten.KeyEnter
+	KeyS Key = ebiten.KeyS
+	KeyW Key = ebiten.KeyW
+
+	KeyEnter     Key = ebiten.KeyEnter
+	KeyArrowUp   Key = ebiten.KeyArrowUp
+	KeyArrowDown Key = ebiten.KeyArrowDown
 )
 
 // events

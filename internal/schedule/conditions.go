@@ -13,3 +13,15 @@ func InState[T comparable](s T) ConditionFn {
 		return current.Get() == s
 	}
 }
+
+func Once(fn ConditionFn) ConditionFn {
+	done := false
+	return func(ctx *core.Context) bool {
+		if done {
+			return false
+		}
+		result := fn(ctx)
+		done = true
+		return result
+	}
+}

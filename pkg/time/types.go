@@ -17,6 +17,7 @@ import (
 // - maxDelta: an optional maximum delta to clamp spikes in frame time
 type Time struct {
 	Delta       time.Duration
+	FixedDelta  time.Duration
 	ScaledDelta time.Duration
 	Elapsed     time.Duration
 	RealElapsed time.Duration
