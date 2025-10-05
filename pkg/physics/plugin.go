@@ -7,12 +7,14 @@ import (
 
 func Plugin(ctx *core.Context, sch *schedule.Scheduler) {
 	// resources
-	core.AddResource(ctx, &PhysicsSettings{})
+	core.AddResource(ctx, &Settings{})
 
 	// systems
 	schedule.AddSystem(sch, schedule.FixedUpdate, applyGravity)
 	schedule.AddSystem(sch, schedule.FixedUpdate, integrateVelocities)
-	schedule.AddSystem(sch, schedule.FixedUpdate, buildBroadPhase)
-	schedule.AddSystem(sch, schedule.FixedUpdate, narrowPhaseAABB)
-	schedule.AddSystem(sch, schedule.FixedUpdate, resolveContactsAABB)
+
+	cs := NewCollisionSolver()
+	schedule.AddSystem(sch, schedule.FixedUpdate, cs.buildBroadPhase)
+	schedule.AddSystem(sch, schedule.FixedUpdate, cs.narrowPhaseAABB)
+	schedule.AddSystem(sch, schedule.FixedUpdate, cs.resolveContactsAABB)
 }
