@@ -1,376 +1,116 @@
 package xp
 
 import (
-	"github.com/hajimehoshi/ebiten/v2"
-
-	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/ecs"
-	"github.com/vistormu/xpeto/internal/event"
-	"github.com/vistormu/xpeto/internal/game"
-	"github.com/vistormu/xpeto/internal/schedule"
-
-	"github.com/vistormu/xpeto/pkg"
-	"github.com/vistormu/xpeto/pkg/asset"
-	"github.com/vistormu/xpeto/pkg/font"
-	"github.com/vistormu/xpeto/pkg/image"
-	"github.com/vistormu/xpeto/pkg/input"
-	"github.com/vistormu/xpeto/pkg/render"
-	"github.com/vistormu/xpeto/pkg/sprite"
-	"github.com/vistormu/xpeto/pkg/text"
-	"github.com/vistormu/xpeto/pkg/time"
-	"github.com/vistormu/xpeto/pkg/transform"
-	"github.com/vistormu/xpeto/pkg/vector"
+	"github.com/vistormu/xpeto/core/ecs"
 )
 
-// ============================================
-// these re-exports are part of the core engine
-// ============================================
-
-// ====
-// core
-// ====
-// context
-type Context = core.Context
-
-func AddResource[T any](ctx *Context, resource T) {
-	core.AddResource(ctx, resource)
-}
-
-var AddResourceByType = core.AddResourceByType
-
-func GetResource[T any](ctx *Context) (T, bool) {
-	return core.GetResource[T](ctx)
-}
-
-func MustResource[T any](ctx *Context) T {
-	return core.MustResource[T](ctx)
-}
-
-// geometry
-type Vector = core.Vector[float32]
+// #############
+// CORE FEATURES
+// #############
 
 // ===
 // ecs
 // ===
-// types
-type Entity = ecs.Entity
-type Component = ecs.Component
-type System = ecs.System
 
-// filters
-type Filter = ecs.Filter
-
-func Has[T any]() Filter {
-	return ecs.Has[T]()
-}
-
-var And = ecs.And
-var Or = ecs.Or
-var Not = ecs.Not
-
-// world
+// the world is the central
 type World = ecs.World
 
-func CreateEntity(ctx *Context) Entity {
-	w := MustResource[*World](ctx)
-	return w.Create()
+// ------
+// entity
+// ------
+
+// an entity is...
+// packed [index:gen]
+type Entity = ecs.Entity
+
+// this function checks
+var AddEntity = ecs.AddEntity
+
+// tjisnmoljkn
+var RemoveEntity = ecs.RemoveEntity
+
+// flhnfkljf
+var HasEntity = ecs.HasEntity
+
+// ---------
+// component
+// ---------
+
+func AddComponent[T any](w *World, e Entity, c T) bool {
+	return ecs.AddComponent(w, e, c)
 }
 
-func DestroyEntity(ctx *Context, entity Entity) {
-	w := MustResource[*World](ctx)
-	w.Destroy(entity)
+func GetComponent[T any](w *World, e Entity) (*T, bool) {
+	return ecs.GetComponent[T](w, e)
 }
 
-func DestroyAllEntities(ctx *Context) {
-	w := MustResource[*World](ctx)
-	w.DestroyAll()
+func RemoveComponent[T any](w *World, e Entity) bool {
+	return ecs.RemoveComponent[T](w, e)
 }
 
-func Query(ctx *Context, f Filter) []Entity {
-	w := MustResource[*World](ctx)
-	return w.Query(f)
+// ------
+// system
+// ------
+
+// a system operates on the components of entitues
+type System = ecs.System
+
+// ---------
+// resources
+// ---------
+
+// add a resource to the world
+// it is recommended to add the resource by value and not by reference
+// the resource will be stored internally as value
+// as it uses go generics, there can only be one value per type (ecs global singletons)
+func AddResource[T any](w *World, r T) {
+	ecs.AddResource(w, r)
 }
 
-func GetComponent[T any](ctx *Context, entity Entity) (T, bool) {
-	w := MustResource[*World](ctx)
-	return ecs.GetComponent[T](w, entity)
+var AddResourceByType = ecs.AddResourceByType
+
+// the type `T` of the function cannot be a reference to a type
+// if it is, it will return false
+// the result will always be a reference to the resource so that
+// the user can mutate its value
+func GetResource[T any](w *World) (*T, bool) {
+	return ecs.GetResource[T](w)
 }
 
-func AddComponent[T any](ctx *Context, entity Entity, component T) {
-	w := MustResource[*World](ctx)
-	ecs.AddComponent(w, entity, component)
+// the type `T` of the function cannot be a reference to a type
+// if it is, it will return false
+func RemoveResorce[T any](w *World) bool {
+	return ecs.RemoveResource[T](w)
 }
 
-func RemoveComponent[T any](ctx *Context, entity Entity) {
-	w := MustResource[*World](ctx)
-	ecs.RemoveComponent[T](w, entity)
+// -----
+// query
+// -----
+
+type Filter = ecs.Filter
+
+func With[T any]() Filter {
+	return ecs.With[T]()
 }
 
-// ====
-// game
-// ====
-// settings
-type GameSettings = game.Settings
-type Layout = game.Layout
-
-// engine
-type Game = game.Game
-
-var NewGame = game.NewGame
-
-// plugin
-type Plugin game.Plugin
-
-// =====
-// event
-// =====
-// types
-type Event = event.Event
-
-// bus
-type EventBus = event.Bus
-
-func Subscribe[T any](ctx *Context, callback func(data T)) Event {
-	eb := core.MustResource[*event.Bus](ctx)
-	return event.Subscribe(eb, callback)
+func Without[T any]() Filter {
+	return ecs.Without[T]()
 }
 
-func Unsubscribe(ctx *Context, e Event) {
-	eb := core.MustResource[*event.Bus](ctx)
-	eb.Unsubscribe(e)
+var Or = ecs.Or
+
+func Query1[A any](w *World, filters ...Filter) *ecs.Query1[A] {
+	return ecs.NewQuery1[A](w, filters...)
 }
 
-func Publish[T any](ctx *Context, data T) {
-	eb := core.MustResource[*event.Bus](ctx)
-	event.Publish(eb, data)
+func Query2[A, B any](w *World, filters ...Filter) *ecs.Query2[A, B] {
+	return ecs.NewQuery2[A, B](w, filters...)
 }
 
-// =========
-// scheduler
-// =========
-// types
-type Stage = schedule.Stage
-type ConditionFn = schedule.ConditionFn
-type Schedule = schedule.Schedule
-type Scheduler = schedule.Scheduler
-type State[T comparable] = schedule.State[T]
-type NextState[T comparable] = schedule.NextState[T]
-
-var PreStartup = schedule.PreStartup
-var Startup = schedule.Startup
-var PostStartup = schedule.PostStartup
-
-var First = schedule.First
-var PreUpdate = schedule.PreUpdate
-
-func OnExit[T comparable](state T) Stage {
-	return schedule.OnExit(state)
-}
-func OnTransition[T comparable](from, to T) Stage {
-	return schedule.OnTransition(from, to)
-}
-func OnEnter[T comparable](state T) Stage {
-	return schedule.OnEnter(state)
+func Query3[A, B, C any](w *World, filters ...Filter) *ecs.Query3[A, B, C] {
+	return ecs.NewQuery3[A, B, C](w, filters...)
 }
 
-var FixedFirst = schedule.FixedFirst
-var FixedPreUpdate = schedule.FixedPreUpdate
-var FixedUpdate = schedule.FixedUpdate
-var FixedPostUpdate = schedule.FixedPostUpdate
-var FixedLast = schedule.FixedLast
-
-var Update = schedule.Update
-var PostUpdate = schedule.PostUpdate
-var Last = schedule.Last
-
-var PreDraw = schedule.PreDraw
-var Draw = schedule.Draw
-var PostDraw = schedule.PostDraw
-
-// conditions
-func InState[T comparable](s T) ConditionFn {
-	return schedule.InState(s)
+func Query4[A, B, C, D any](w *World, filters ...Filter) *ecs.Query4[A, B, C, D] {
+	return ecs.NewQuery4[A, B, C, D](w, filters...)
 }
-
-var Once = schedule.Once
-
-// scheduler
-func AddStateMachine[T comparable](sch *Scheduler, initial T) {
-	schedule.AddStateMachine(sch, initial)
-}
-
-var AddSystem = schedule.AddSystem
-
-// states
-func CurrentState[T comparable](ctx *Context) T {
-	current, ok := core.GetResource[*State[T]](ctx)
-	if !ok {
-		var zero T
-		return zero
-	}
-
-	return current.Get()
-}
-
-func SetNextState[T comparable](ctx *Context, s T) {
-	next, ok := core.GetResource[*NextState[T]](ctx)
-	if !ok {
-		return
-	}
-
-	next.Set(s)
-}
-
-// events
-type EventStateTransition[T comparable] = schedule.EventStateTransition[T]
-
-// ============================================
-// these re-exports are part of opt-in packages
-// ============================================
-var DefaultPlugins = pkg.DefaultPlugins
-
-// =====
-// asset
-// =====
-// types
-type Handle = asset.Handle
-type LoadState = asset.LoadState
-type LoaderFn = asset.LoaderFn
-
-const (
-	NotFound = asset.NotFound
-	Loading  = asset.Loading
-	Loaded   = asset.Loaded
-	Failed   = asset.Failed
-)
-
-// server
-type AssetServer = asset.Server
-
-func AddAssetLoader(ctx *Context, ext string, loader LoaderFn) {
-	as, ok := core.GetResource[*asset.Server](ctx)
-	if !ok {
-		return
-	}
-	as.AddLoader(ext, loader)
-}
-
-func LoadAsset[T any, B any](ctx *Context) {
-	as, ok := core.GetResource[*AssetServer](ctx)
-	if !ok {
-		return
-	}
-	asset.Load[T, B](as)
-}
-
-func GetAsset[T any](ctx *Context, handle Handle) (T, bool) {
-	as, ok := core.GetResource[*AssetServer](ctx)
-	if !ok {
-		var zero T
-		return zero, false
-	}
-	return asset.GetAsset[T](as, handle)
-}
-
-func GetState(ctx *Context, handle Handle) LoadState {
-	as, ok := core.GetResource[*AssetServer](ctx)
-	if !ok {
-		return NotFound
-	}
-	return as.GetState(handle)
-}
-
-func IsLoaded[B any]() ConditionFn {
-	return asset.IsLoaded[B]()
-}
-
-// event
-type AssetEvent = asset.AssetEvent
-type AssetEventKind = asset.AssetEventKind
-
-const (
-	AssetAdded    = asset.Added
-	AssetModified = asset.Modified
-	AssetRemoved  = asset.Removed
-)
-
-// plugin
-var AssetPlugin = asset.AssetPlugin
-
-// =====
-// image
-// =====
-// types
-type Image = image.Image
-
-// components
-type Sprite = sprite.Sprite
-
-// =====
-// input
-// =====
-// types
-type Key = input.Key
-type Keyboard = input.Keyboard
-type MouseButton = input.MouseButton
-type Mouse = input.Mouse
-type GamepadButton = input.GamepadButton
-type GamepadAxis = input.GamepadAxis
-type Gamepad = input.Gamepad
-
-const (
-	KeyA Key = ebiten.KeyA
-	KeyB Key = ebiten.KeyB
-
-	KeyS Key = ebiten.KeyS
-	KeyW Key = ebiten.KeyW
-
-	KeyEnter     Key = ebiten.KeyEnter
-	KeyArrowUp   Key = ebiten.KeyArrowUp
-	KeyArrowDown Key = ebiten.KeyArrowDown
-)
-
-// events
-type KeyJustPressed = input.KeyJustPressed
-type KeyJustReleased = input.KeyJustReleased
-type MouseButtonJustPressed = input.MouseButtonJustPressed
-type MouseButtonJustReleased = input.MouseButtonJustReleased
-
-// =====
-// fonts
-// =====
-// types
-type Font = font.Font
-
-// components
-type Text = text.Text
-type Align = text.Align
-
-var AlignStart = text.AlignStart
-var AlignCenter = text.AlignCenter
-var AlignEnd = text.AlignEnd
-
-// ========
-// graphics
-// ========
-type Circle = vector.Circle
-type Rect = vector.Rect
-
-// ======
-// render
-// ======
-// components
-type Renderable = render.Renderable
-
-// ====
-// time
-// ====
-// types
-type Time = time.Time
-
-// =========
-// transform
-// =========
-
-// components
-type Transform = transform.Transform
