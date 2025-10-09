@@ -1,8 +1,8 @@
 package game
 
 import (
-	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/schedule"
+	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/schedule"
 )
 
-type Plugin func(*core.Context, *schedule.Scheduler)
+type Plugin func(*ecs.World, *schedule.Scheduler)

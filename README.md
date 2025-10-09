@@ -26,7 +26,7 @@ _xpeto_ is a simple code-first 2D game engine for Go to help you create small ga
 _xpeto_ is built on top of the [ebitengine](https://ebitengine.org/) library and heavily inspired by the [bevy](https://bevyengine.org/) game engine
 
 - it follows the modern [ECS](https://github.com/SanderMertens/ecs-faq) architecture
-- the API is ddesigned to be simple and beautiful with the help of [Go's generics](https://go.dev/doc/tutorial/generics)
+- the API is designed to be simple and beautiful with the help of [Go's generics](https://go.dev/doc/tutorial/generics). it only uses the verbs `Add`, `Get`, `Set`, `Remove`.
 - extensible and modular by design, inspired by [Bevy's plugin system](https://bevy.org/learn/quick-start/getting-started/plugins/)
 
 ## installation

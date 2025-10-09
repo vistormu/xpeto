@@ -3,130 +3,136 @@ package schedule
 import (
 	"testing"
 
-	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/event"
+	"github.com/vistormu/xpeto/core/ecs"
 )
 
 func TestOrdering(t *testing.T) {
-	ctx := core.NewContext()
+	w := ecs.NewWorld()
 	sch := NewScheduler()
 
-	AddSystem(sch, PreStartup, func(*core.Context) {
-		t.Log("0")
-	})
-	AddSystem(sch, Startup, func(*core.Context) {
-		t.Log("1")
-	})
-	AddSystem(sch, PostStartup, func(*core.Context) {
-		t.Log("2")
-	})
+	checkOrder := func(expected uint64) func(*ecs.World) {
+		return func(w *ecs.World) {
+			if expected != ecs.GetSystemId(w) {
+				t.Fatal("ids did not match")
+			}
+		}
+	}
 
-	AddSystem(sch, First, func(*core.Context) {
-		t.Log("3")
-	})
-	AddSystem(sch, PreUpdate, func(*core.Context) {
-		t.Log("4")
-	})
+	stages := []StageFn{
+		PreStartup,
+		Startup,
+		PostStartup,
+		First,
+		PreUpdate,
+		FixedFirst,
+		FixedPreUpdate,
+		FixedUpdate,
+		FixedPostUpdate,
+		FixedLast,
+		Update,
+		PostUpdate,
+		Last,
+	}
 
-	AddSystem(sch, FixedFirst, func(*core.Context) {
-		t.Log("5")
-	})
-	AddSystem(sch, FixedPreUpdate, func(*core.Context) {
-		t.Log("6")
-	})
-	AddSystem(sch, FixedUpdate, func(*core.Context) {
-		t.Log("7")
-	})
-	AddSystem(sch, FixedPostUpdate, func(*core.Context) {
-		t.Log("8")
-	})
-	AddSystem(sch, FixedLast, func(*core.Context) {
-		t.Log("9")
-	})
+	for i, s := range stages {
+		AddSystem(sch, s, checkOrder(uint64(i+1)))
+	}
 
-	AddSystem(sch, Update, func(*core.Context) {
-		t.Log("10")
-	})
-	AddSystem(sch, PostUpdate, func(*core.Context) {
-		t.Log("11")
-	})
-	AddSystem(sch, Last, func(*core.Context) {
-		t.Log("12")
-	})
-
-	AddSystem(sch, PreDraw, func(*core.Context) {
-		t.Log("13")
-	})
-	AddSystem(sch, Draw, func(*core.Context) {
-		t.Log("14")
-	})
-	AddSystem(sch, PostDraw, func(*core.Context) {
-		t.Log("15")
-	})
-
-	sch.RunStartup(ctx)
-	sch.RunUpdate(ctx)
-	sch.RunDraw(ctx)
+	sch.RunStartup(w)
+	sch.RunUpdate(w)
+	sch.RunDraw(w)
 }
 
-type states int
+type mockState int
 
 const (
-	firstState states = iota + 1
+	firstState mockState = iota
 	secondState
 )
 
 func TestStateMachine(t *testing.T) {
 	// prepare
-	ctx := core.NewContext()
-	eb := event.NewBus()
-	core.AddResource(ctx, eb)
-
+	w := ecs.NewWorld()
 	sch := NewScheduler()
 
 	// state machine
 	AddStateMachine(sch, firstState)
 
-	AddSystem(sch, OnEnter(firstState), func(*core.Context) {
-		t.Log("first state entered")
-	})
-	AddSystem(sch, OnExit(firstState), func(*core.Context) {
-		t.Log("first state exited")
-	})
-	AddSystem(sch, OnTransition(firstState, secondState), func(*core.Context) {
-		t.Log("transitioned from first to second state")
-	})
-	AddSystem(sch, OnEnter(secondState), func(*core.Context) {
-		t.Log("second state entered")
-	})
+	checkOrder := func(expected uint64) func(*ecs.World) {
+		return func(w *ecs.World) {
+			if expected != ecs.GetSystemId(w) {
+				t.Fatalf("wrong order: expected %d, got %d", expected, ecs.GetSystemId(w))
+			}
+		}
+	}
 
-	// startup
-	sch.RunStartup(ctx)
+	stages := []StageFn{
+		OnEnter(firstState),
+		OnExit(firstState),
+		OnTransition(firstState, secondState),
+		OnEnter(secondState),
+	}
 
-	_, ok := core.GetResource[*State[states]](ctx)
+	for i, s := range stages {
+		AddSystem(sch, s, checkOrder(uint64(i+3))) // starts at 1 and the state machine registers two systems
+	}
+
+	sch.RunStartup(w)
+
+	_, ok := GetState[mockState](w)
 	if !ok {
 		t.Fatal("state not found")
 	}
 
-	_, ok = core.GetResource[*NextState[states]](ctx)
+	_, ok = ecs.GetResource[nextState[mockState]](w)
 	if !ok {
 		t.Fatal("next state not found")
 	}
 
 	// update
-	sch.RunUpdate(ctx)
+	sch.RunUpdate(w)
 
-	current := core.MustResource[*State[states]](ctx)
-	if current.Get() != firstState {
+	current, ok := GetState[mockState](w)
+	if current != firstState {
 		t.Fatal("state machine did not transition to first state")
 	}
 
-	next := core.MustResource[*NextState[states]](ctx)
+	next, _ := ecs.GetResource[nextState[mockState]](w)
 	if next.next != nil || next.pending {
 		t.Fatal("next state did not clean up")
 	}
 
 	// transition
-	next.Set(secondState)
-	sch.RunUpdate(ctx)
+	ok = SetNextState(w, secondState)
+	if !ok {
+		t.Fatal("could not set next state")
+	}
+
+	sch.RunUpdate(w)
+}
+
+func TestOnceAndOnceWhen(t *testing.T) {
+	w := ecs.NewWorld()
+	sch := NewScheduler()
+	ran := 0
+
+	AddSystem(sch, Update, func(*ecs.World) { ran++ }).RunIf(Once())
+	sch.RunUpdate(w)
+	sch.RunUpdate(w)
+	if ran != 1 {
+		t.Fatalf("Once ran %d times", ran)
+	}
+
+	ran = 0
+	gate := false
+	AddSystem(sch, Update, func(*ecs.World) { ran++ }).
+		RunIf(OnceWhen(func(*ecs.World) bool { return gate }))
+
+	sch.RunUpdate(w) // gate=false → not yet
+	gate = true
+	sch.RunUpdate(w) // fires now
+	sch.RunUpdate(w) // no more
+	if ran != 1 {
+		t.Fatalf("OnceWhen ran %d times", ran)
+	}
 }

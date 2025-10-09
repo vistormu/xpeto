@@ -3,10 +3,9 @@ package game
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/ecs"
-	"github.com/vistormu/xpeto/internal/event"
-	"github.com/vistormu/xpeto/internal/schedule"
+	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/event"
+	"github.com/vistormu/xpeto/core/schedule"
 )
 
 // ====
@@ -18,24 +17,24 @@ type Layout struct {
 }
 
 type ebitenGame struct {
-	context   *core.Context
+	world     *ecs.World
 	scheduler *schedule.Scheduler
 }
 
 func (g *ebitenGame) Update() error {
-	g.scheduler.RunUpdate(g.context)
+	g.scheduler.RunUpdate(g.world)
 
 	return nil
 }
 
 func (g *ebitenGame) Draw(screen *ebiten.Image) {
-	core.AddResource(g.context, screen)
-	g.scheduler.RunDraw(g.context)
-	core.RemoveResource[*ebiten.Image](g.context)
+	ecs.AddResource(g.world, screen)
+	g.scheduler.RunDraw(g.world)
+	ecs.RemoveResource[ebiten.Image](g.world)
 }
 
 func (g *ebitenGame) Layout(w, h int) (int, int) {
-	layout := core.MustResource[*Layout](g.context)
+	layout, _ := ecs.GetResource[Layout](g.world)
 	return layout.Width, layout.Height
 }
 
@@ -69,21 +68,27 @@ func (g *Game) WithSettings(settings Settings) *Game {
 
 func (g *Game) build() *Game {
 	// game
-	g.game = new(ebitenGame)
-	g.game.context = core.NewContext()
-	g.game.scheduler = schedule.NewScheduler()
+	g.game = &ebitenGame{
+		world:     ecs.NewWorld(),
+		scheduler: schedule.NewScheduler(),
+	}
 
 	// core resources
-	core.AddResource(g.game.context, ecs.NewWorld())
-	core.AddResource(g.game.context, event.NewBus())
-	core.AddResource(g.game.context, &Layout{g.settings.VirtualWidth, g.settings.VirtualHeight})
+	event.Startup(g.game.world)
+	ecs.AddResource(g.game.world, &Layout{
+		g.settings.VirtualWidth,
+		g.settings.VirtualHeight,
+	})
+
+	// add event refreshing
+	schedule.AddSystem(g.game.scheduler, schedule.Last, event.Update)
 
 	// plugins
 	for _, plugin := range g.plugins {
-		plugin(g.game.context, g.game.scheduler)
+		plugin(g.game.world, g.game.scheduler)
 	}
 
-	g.game.scheduler.RunStartup(g.game.context)
+	g.game.scheduler.RunStartup(g.game.world)
 
 	// settings
 	ebiten.SetWindowSize(g.settings.WindowWidth, g.settings.WindowHeight)

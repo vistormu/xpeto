@@ -1,8 +1,7 @@
 package ecs
 
 import (
-	"reflect"
-	"sync"
+	"github.com/vistormu/go-dsa/hashmap"
 )
 
 // =====
@@ -68,49 +67,22 @@ func (s *store[T]) remove(e Entity) bool {
 // ========
 // registry
 // ========
-type registry struct {
-	mu     sync.RWMutex
-	stores map[reflect.Type]any
-}
-
-func newRegistry() *registry {
-	return &registry{
-		stores: make(map[reflect.Type]any),
-	}
-}
-
-func getStore[T any](r *registry) *store[T] {
-	key := reflect.TypeFor[T]()
-
-	r.mu.RLock()
-	s, ok := r.stores[key]
+func getStore[T any](r *hashmap.TypeMap) *store[T] {
+	s, ok := hashmap.Get[store[T]](r)
 	if ok {
-		r.mu.RUnlock()
-		return s.(*store[T])
-	}
-	r.mu.RUnlock()
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	// double check for race conditions
-	s, ok = r.stores[key]
-	if ok {
-		return s.(*store[T])
+		return s
 	}
 
 	ns := newStore[T]()
-	r.stores[key] = ns
+	hashmap.Add(r, ns)
 
 	return ns
 }
 
 // TODO: the complexity is O(c), where c is the number of components
-func (r *registry) removeComponents(e Entity) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
+func removeComponents(r *hashmap.TypeMap, e Entity) bool {
 	removed := false
-	for _, raw := range r.stores {
+	for _, raw := range r.Iter() {
 		switch s := raw.(type) {
 		case interface{ remove(Entity) bool }:
 			if s.remove(e) {

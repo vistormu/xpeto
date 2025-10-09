@@ -1,27 +1,42 @@
 package schedule
 
 import (
-	"github.com/vistormu/xpeto/internal/core"
+	"github.com/vistormu/xpeto/core/ecs"
 )
 
+type ConditionFn = func(*ecs.World) bool
+
 func InState[T comparable](s T) ConditionFn {
-	return func(ctx *core.Context) bool {
-		current, ok := core.GetResource[*State[T]](ctx)
+	return func(w *ecs.World) bool {
+		current, ok := GetState[T](w)
 		if !ok {
 			return false
 		}
-		return current.Get() == s
+		return current == s
 	}
 }
 
-func Once(fn ConditionFn) ConditionFn {
+func Once() ConditionFn {
 	done := false
-	return func(ctx *core.Context) bool {
+	return func(w *ecs.World) bool {
 		if done {
 			return false
 		}
-		result := fn(ctx)
 		done = true
-		return result
+		return true
+	}
+}
+
+func OnceWhen(fn ConditionFn) ConditionFn {
+	done := false
+	return func(w *ecs.World) bool {
+		if done {
+			return false
+		}
+		if fn(w) {
+			done = true
+			return true
+		}
+		return false
 	}
 }

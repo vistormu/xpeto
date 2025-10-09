@@ -2,6 +2,9 @@ package xp
 
 import (
 	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/event"
+	"github.com/vistormu/xpeto/core/game"
+	"github.com/vistormu/xpeto/core/schedule"
 )
 
 // #############
@@ -26,10 +29,10 @@ type Entity = ecs.Entity
 // this function checks
 var AddEntity = ecs.AddEntity
 
-// tjisnmoljkn
+// description
 var RemoveEntity = ecs.RemoveEntity
 
-// flhnfkljf
+// description
 var HasEntity = ecs.HasEntity
 
 // ---------
@@ -54,6 +57,11 @@ func RemoveComponent[T any](w *World, e Entity) bool {
 
 // a system operates on the components of entitues
 type System = ecs.System
+
+// `GetSystemId` retrieves the unique identifier of the current running system
+//
+// the id is provided by the scheduler at system registration time (`xp.AddSystem`)
+var GetSystemId = ecs.GetSystemId
 
 // ---------
 // resources
@@ -113,4 +121,157 @@ func Query3[A, B, C any](w *World, filters ...Filter) *ecs.Query3[A, B, C] {
 
 func Query4[A, B, C, D any](w *World, filters ...Filter) *ecs.Query4[A, B, C, D] {
 	return ecs.NewQuery4[A, B, C, D](w, filters...)
+}
+
+// =====
+// event
+// =====
+
+// description
+func AddEvent[T any](w *World, ev T) {
+	event.AddEvent(w, ev)
+}
+
+// description
+func GetEvents[T any](w *World) ([]T, bool) {
+	return event.GetEvents[T](w)
+}
+
+// ====
+// game
+// ====
+
+// ----
+// game
+// ----
+type Game = game.Game
+
+// ------
+// plugin
+// ------
+
+// ========
+// schedule
+// ========
+
+// ---------
+// condition
+// ---------
+
+// a condition function is defined as
+//
+// func(*World) bool
+//
+// it takes the ecs world as a parameter and returns a boolean indicating if the system
+// should or should not run
+type ConditionFn = schedule.ConditionFn
+
+// ldhn
+func InState[T comparable](s T) ConditionFn {
+	return schedule.InState(s)
+}
+
+// description
+var Once = schedule.Once
+
+// description
+var OnceWhen = schedule.OnceWhen
+
+// ---------
+// scheduler
+// ---------
+
+// the `Scheduler` is the main struct to run
+//
+// methods:
+// - `RunIf(condition ConditionFn)`: add a condition for the execution of a system
+type Scheduler = schedule.Scheduler
+
+// adds a system to an schedule
+var AddSystem = schedule.AddSystem
+
+// -----
+// stage
+// -----
+
+// description
+var PreStartup = schedule.PreStartup
+
+// description
+var Startup = schedule.Startup
+
+// description
+var PostStartup = schedule.PostStartup
+
+// description
+var First = schedule.First
+
+// description
+var PreUpdate = schedule.PreUpdate
+
+// description
+func OnExit[T comparable](state T) schedule.StageFn {
+	return schedule.OnExit(state)
+}
+
+// description
+func OnTransition[T comparable](from, to T) schedule.StageFn {
+	return schedule.OnTransition(from, to)
+}
+
+// description
+func OnEnter[T comparable](state T) schedule.StageFn {
+	return schedule.OnEnter(state)
+}
+
+// description
+var FixedFirst = schedule.FixedFirst
+
+// description
+var FixedPreUpdate = schedule.FixedPreUpdate
+
+// description
+var FixedUpdate = schedule.FixedUpdate
+
+// description
+var FixedPostUpdate = schedule.FixedPostUpdate
+
+// description
+var FixedLast = schedule.FixedLast
+
+// description
+var Update = schedule.Update
+
+// description
+var PostUpdate = schedule.PostUpdate
+
+// description
+var Last = schedule.Last
+
+// description
+var PreDraw = schedule.PreDraw
+
+// description
+var Draw = schedule.Draw
+
+// description
+var PostDraw = schedule.PostDraw
+
+// -----
+// state
+// -----
+
+// description
+func AddStateMachine[T comparable](sch *Scheduler, initial T) {
+	schedule.AddStateMachine(sch, initial)
+}
+
+// description
+func GetState[T comparable](w *World) (T, bool) {
+	return schedule.GetState[T](w)
+}
+
+// description
+func SetNextState[T comparable](w *World, s T) bool {
+	return schedule.SetNextState(w, s)
 }

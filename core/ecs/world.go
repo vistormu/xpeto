@@ -2,20 +2,26 @@ package ecs
 
 import (
 	"reflect"
+
+	"github.com/vistormu/go-dsa/hashmap"
 )
 
 type World struct {
 	population *population
-	registry   *registry
-	resources  map[reflect.Type]any
+	registry   *hashmap.TypeMap
+	resources  *hashmap.TypeMap
 }
 
 func NewWorld() *World {
-	return &World{
+	w := &World{
 		population: newPopulation(),
-		registry:   newRegistry(),
-		resources:  make(map[reflect.Type]any),
+		registry:   hashmap.NewTypeMap(),
+		resources:  hashmap.NewTypeMap(),
 	}
+
+	AddResource(w, &systemId{})
+
+	return w
 }
 
 // ===
@@ -32,7 +38,7 @@ func RemoveEntity(w *World, e Entity) bool {
 		return false
 	}
 
-	w.registry.removeComponents(e)
+	removeComponents(w.registry, e)
 
 	return true
 }
@@ -72,89 +78,18 @@ func RemoveComponent[T any](w *World, e Entity) bool {
 }
 
 // resources
-func baseType(t reflect.Type) reflect.Type {
-	if t.Kind() == reflect.Pointer {
-		return t.Elem()
-	}
-	return t
-}
-
-func asPointerToValue(v any) any {
-	rv := reflect.ValueOf(v)
-	rt := rv.Type()
-
-	if rt.Kind() == reflect.Pointer {
-		return v
-	}
-
-	ptr := reflect.New(rt)
-	ptr.Elem().Set(rv)
-
-	return ptr.Interface()
-}
-
 func AddResource[T any](w *World, r T) {
-	rt := reflect.TypeFor[T]()
-	key := baseType(rt)
-	ptr := asPointerToValue(r)
-	w.resources[key] = ptr
+	hashmap.Add(w.resources, r)
 }
 
 func AddResourceByType(w *World, r any, t reflect.Type) bool {
-	if t == nil || r == nil {
-		return false
-	}
-
-	key := baseType(t)
-
-	rv := reflect.ValueOf(r)
-	rt := rv.Type()
-
-	switch {
-	case rt == t || rt.AssignableTo(t):
-		ptr := reflect.New(key)
-		ptr.Elem().Set(rv.Convert(key))
-		w.resources[key] = ptr.Interface()
-
-		return true
-
-	case rt == reflect.PointerTo(key) || rt.AssignableTo(reflect.PointerTo(key)):
-		w.resources[key] = r
-
-		return true
-
-	default:
-		return false
-	}
+	return hashmap.AddByType(w.resources, r, t)
 }
 
 func GetResource[T any](w *World) (*T, bool) {
-	rt := reflect.TypeFor[T]()
-	if rt.Kind() == reflect.Pointer {
-		return nil, false
-	}
-
-	v, ok := w.resources[rt]
-	if !ok {
-		return nil, false
-	}
-
-	out, ok := v.(*T)
-
-	return out, ok
+	return hashmap.Get[T](w.resources)
 }
 
 func RemoveResource[T any](w *World) bool {
-	rt := reflect.TypeFor[T]()
-	if rt.Kind() == reflect.Pointer {
-		return false
-	}
-
-	if _, ok := w.resources[rt]; !ok {
-		return false
-	}
-
-	delete(w.resources, rt)
-
-	return true
+	return hashmap.Remove[T](w.resources)
 }

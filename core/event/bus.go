@@ -1,83 +1,77 @@
 package event
 
 import (
-	"reflect"
-	"slices"
+	"github.com/vistormu/go-dsa/hashmap"
+	"github.com/vistormu/xpeto/core/ecs"
 )
 
-type Bus struct {
-	events    map[reflect.Type][]Event
-	callbacks map[Event]func(data any)
-	nextId    uint32
+type bus struct {
+	registry *hashmap.TypeMap
+	readers  map[uint64]*hashmap.TypeMap
 }
 
-func NewBus() *Bus {
-	return &Bus{
-		events:    make(map[reflect.Type][]Event),
-		callbacks: make(map[Event]func(data any)),
-		nextId:    1,
+func newBus() bus {
+	return bus{
+		registry: hashmap.NewTypeMap(),
+		readers:  make(map[uint64]*hashmap.TypeMap),
 	}
 }
 
-func Subscribe[T any](b *Bus, callback func(data T)) Event {
-	// register callback
-	eventType := reflect.TypeFor[T]()
-	event := Event{Id: b.nextId}
-	b.nextId++
+// ============
+// game systems
+// ============
 
-	// create new callback slice if it doesn't exist
-	_, ok := b.events[eventType]
-	if !ok {
-		b.events[eventType] = []Event{}
-	}
-
-	// add the callbacks to the map and events
-	b.callbacks[event] = func(event any) {
-		callback(event.(T))
-	}
-
-	b.events[eventType] = append(b.events[eventType], event)
-
-	return event
+func Startup(w *ecs.World) {
+	ecs.AddResource(w, newBus())
 }
 
-func (b *Bus) Unsubscribe(event Event) {
-	// remove the callback from the map
-	_, ok := b.callbacks[event]
-	if !ok {
-		return
-	}
-	delete(b.callbacks, event)
+func Update(w *ecs.World) {
+	eb, _ := ecs.GetResource[bus](w)
 
-	// remove the event from all event types
-	for eventType, events := range b.events {
-		for i, h := range events {
-			if h.Id == event.Id {
-				b.events[eventType] = slices.Delete(events, i, i+1)
-				break
-			}
+	for _, e := range eb.registry.Values() {
+		switch ev := e.(type) {
+		case interface{ update() }:
+			ev.update()
 		}
 	}
 }
 
-func Publish[T any](b *Bus, data T) {
-	// get the type of the event
-	eventType := reflect.TypeFor[T]()
+// ===
+// API
+// ===
 
-	// check if there are any subscribers to the event
-	events, ok := b.events[eventType]
+func AddEvent[T any](w *ecs.World, e T) {
+	eb, _ := ecs.GetResource[bus](w)
+
+	_, ok := hashmap.Get[events[T]](eb.registry)
 	if !ok {
-		return
+		hashmap.Add(eb.registry, newEvents[T]())
 	}
 
-	// call the events
-	for _, e := range events {
-		// get the callback function
-		callback, ok := b.callbacks[e]
-		if !ok {
-			continue
-		}
+	ev, _ := hashmap.Get[events[T]](eb.registry)
+	ev.add(e)
+}
 
-		callback(data)
+func GetEvents[T any](w *ecs.World) ([]T, bool) {
+	eb, _ := ecs.GetResource[bus](w)
+	id := ecs.GetSystemId(w)
+
+	rm, ok := eb.readers[id]
+	if !ok {
+		rm = hashmap.NewTypeMap()
+		eb.readers[id] = rm
 	}
+
+	er, ok := hashmap.Get[eventReader[T]](rm)
+	if !ok {
+		hashmap.Add(rm, eventReader[T]{})
+		er, _ = hashmap.Get[eventReader[T]](rm)
+	}
+
+	ev, ok := hashmap.Get[events[T]](eb.registry)
+	if !ok {
+		return nil, false
+	}
+
+	return er.read(ev)
 }

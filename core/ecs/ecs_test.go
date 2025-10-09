@@ -102,7 +102,7 @@ func TestComponent(t *testing.T) {
 	e := AddEntity(w)
 	AddComponent(w, e, mockComponent{value: 1})
 
-	if len(w.registry.stores) != 1 {
+	if w.registry.Len() != 1 {
 		t.Fatal("wrong length of stores")
 	}
 
@@ -128,7 +128,7 @@ func TestComponent(t *testing.T) {
 		t.Fatal("error removing component")
 	}
 
-	if len(w.registry.stores) != 1 {
+	if w.registry.Len() != 1 {
 		t.Fatal("wrong number of stores")
 	}
 }
@@ -168,6 +168,15 @@ func TestResources(t *testing.T) {
 	if ok {
 		t.Fatal("resource was not removed")
 	}
+
+	AddResource(w, &mockResource{value: 5})
+	result, ok = GetResource[mockResource](w)
+	if !ok {
+		t.Fatal("mock resource should be inside the world")
+	}
+	if result.value != 5 {
+		t.Fatal("wrong value")
+	}
 }
 
 type mockComponent2 struct{}
@@ -199,7 +208,9 @@ func TestQuery(t *testing.T) {
 
 		b.A().value = 10
 
-		t.Log(i)
+		if i != count {
+			t.Fatal("iterator fAiled")
+		}
 
 		count++
 	}
