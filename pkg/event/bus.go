@@ -17,15 +17,7 @@ func newBus() bus {
 	}
 }
 
-// ============
-// game systems
-// ============
-
-func Startup(w *ecs.World) {
-	ecs.AddResource(w, newBus())
-}
-
-func Update(w *ecs.World) {
+func update(w *ecs.World) {
 	eb, _ := ecs.GetResource[bus](w)
 
 	for _, e := range eb.registry.Values() {

@@ -5,4 +5,4 @@ import (
 	"github.com/vistormu/xpeto/core/schedule"
 )
 
-type Plugin func(*ecs.World, *schedule.Scheduler)
+type Pkg = func(*ecs.World, *schedule.Scheduler)

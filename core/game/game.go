@@ -4,7 +4,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/event"
 	"github.com/vistormu/xpeto/core/schedule"
 )
 
@@ -15,6 +14,8 @@ type Layout struct {
 	Width  int
 	Height int
 }
+
+type Screen = ebiten.Image
 
 type ebitenGame struct {
 	world     *ecs.World
@@ -43,56 +44,32 @@ func (g *ebitenGame) Layout(w, h int) (int, int) {
 // =======
 type Game struct {
 	game *ebitenGame
-
-	settings Settings
-	plugins  []Plugin
+	pkgs []Pkg
 }
 
 func NewGame() *Game {
 	return &Game{
-		game:     nil,
-		settings: Settings{},
-		plugins:  make([]Plugin, 0),
+		game: nil,
+		pkgs: make([]Pkg, 0),
 	}
 }
 
-func (g *Game) WithPlugins(plugin ...Plugin) *Game {
-	g.plugins = append(g.plugins, plugin...)
-	return g
-}
-
-func (g *Game) WithSettings(settings Settings) *Game {
-	g.settings = settings
+func (g *Game) WithPkgs(pkgs ...Pkg) *Game {
+	g.pkgs = append(g.pkgs, pkgs...)
 	return g
 }
 
 func (g *Game) build() *Game {
-	// game
 	g.game = &ebitenGame{
 		world:     ecs.NewWorld(),
 		scheduler: schedule.NewScheduler(),
 	}
 
-	// core resources
-	event.Startup(g.game.world)
-	ecs.AddResource(g.game.world, &Layout{
-		g.settings.VirtualWidth,
-		g.settings.VirtualHeight,
-	})
-
-	// add event refreshing
-	schedule.AddSystem(g.game.scheduler, schedule.Last, event.Update)
-
-	// plugins
-	for _, plugin := range g.plugins {
-		plugin(g.game.world, g.game.scheduler)
+	for _, pkg := range g.pkgs {
+		pkg(g.game.world, g.game.scheduler)
 	}
 
 	g.game.scheduler.RunStartup(g.game.world)
-
-	// settings
-	ebiten.SetWindowSize(g.settings.WindowWidth, g.settings.WindowHeight)
-	ebiten.SetWindowTitle(g.settings.WindowTitle)
 
 	return g
 }

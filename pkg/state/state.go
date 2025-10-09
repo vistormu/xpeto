@@ -1,8 +1,8 @@
-package schedule
+package state
 
 import (
-	"github.com/vistormu/go-dsa/hashmap"
 	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/schedule"
 )
 
 // =====
@@ -26,44 +26,44 @@ type transition[T comparable] struct {
 // =============
 type stateMachine[T comparable] struct {
 	initial      T
-	onExit       map[T][]*schedule
-	onTransition map[transition[T]][]*schedule
-	onEnter      map[T][]*schedule
+	onExit       map[T][]*schedule.Schedule
+	onTransition map[transition[T]][]*schedule.Schedule
+	onEnter      map[T][]*schedule.Schedule
 }
 
 func newStateMachine[T comparable](initial T) *stateMachine[T] {
 	return &stateMachine[T]{
 		initial:      initial,
-		onExit:       make(map[T][]*schedule),
-		onTransition: make(map[transition[T]][]*schedule),
-		onEnter:      make(map[T][]*schedule),
+		onExit:       make(map[T][]*schedule.Schedule),
+		onTransition: make(map[transition[T]][]*schedule.Schedule),
+		onEnter:      make(map[T][]*schedule.Schedule),
 	}
 }
 
-func (sm *stateMachine[T]) addOnExit(st T, s *schedule) {
+func (sm *stateMachine[T]) addOnExit(st T, s *schedule.Schedule) {
 	_, ok := sm.onExit[st]
 	if !ok {
-		sm.onExit[st] = make([]*schedule, 0)
+		sm.onExit[st] = make([]*schedule.Schedule, 0)
 	}
 
 	sm.onExit[st] = append(sm.onExit[st], s)
 }
 
-func (sm *stateMachine[T]) addOnTransition(from, to T, s *schedule) {
+func (sm *stateMachine[T]) addOnTransition(from, to T, s *schedule.Schedule) {
 	key := transition[T]{from: from, to: to}
 
 	_, ok := sm.onTransition[key]
 	if !ok {
-		sm.onTransition[key] = make([]*schedule, 0)
+		sm.onTransition[key] = make([]*schedule.Schedule, 0)
 	}
 
 	sm.onTransition[key] = append(sm.onTransition[key], s)
 }
 
-func (sm *stateMachine[T]) addOnEnter(st T, s *schedule) {
+func (sm *stateMachine[T]) addOnEnter(st T, s *schedule.Schedule) {
 	_, ok := sm.onEnter[st]
 	if !ok {
-		sm.onEnter[st] = make([]*schedule, 0)
+		sm.onEnter[st] = make([]*schedule.Schedule, 0)
 	}
 
 	sm.onEnter[st] = append(sm.onEnter[st], s)
@@ -74,14 +74,14 @@ func (sm *stateMachine[T]) startup(w *ecs.World) {
 	ecs.AddResource(w, nextState[T]{next: &sm.initial, pending: true})
 }
 
-func (sm *stateMachine[T]) run(w *ecs.World, ss []*schedule) {
+func (sm *stateMachine[T]) run(w *ecs.World, ss []*schedule.Schedule) {
 	for _, sch := range ss {
 		if sch == nil {
 			continue
 		}
 
 		execute := true
-		for _, c := range sch.conditions {
+		for _, c := range sch.Conditions {
 			if c == nil {
 				continue
 			}
@@ -90,8 +90,8 @@ func (sm *stateMachine[T]) run(w *ecs.World, ss []*schedule) {
 		}
 
 		if execute {
-			ecs.SetSystemId(w, sch.id)
-			sch.system(w)
+			ecs.SetSystemId(w, sch.Id)
+			sch.System(w)
 		}
 	}
 }
@@ -124,28 +124,11 @@ func (sm *stateMachine[T]) update(w *ecs.World) {
 // ===
 // API
 // ===
-
-func AddStateMachine[T comparable](sch *Scheduler, initial T) {
+func AddStateMachine[T comparable](sch *schedule.Scheduler, initial T) {
 	sm := newStateMachine(initial)
-	hashmap.Add(sch.stateMachines, sm)
-
-	// startup schedule
-	s := newSchedule()
-	s.stage = postStartup
-	s.system = sm.startup
-	s.id = sch.nextId
-	sch.nextId++
-
-	sch.addSchedule(s)
-
-	// update schedule
-	s = newSchedule()
-	s.stage = stateTransition
-	s.system = sm.update
-	s.id = sch.nextId
-	sch.nextId++
-
-	sch.addSchedule(s)
+	schedule.AddExtra(sch, sm)
+	schedule.AddSystem(sch, schedule.PostStartup, sm.startup)
+	schedule.AddSystem(sch, schedule.StateTransition, sm.update)
 }
 
 func GetState[T comparable](w *ecs.World) (T, bool) {

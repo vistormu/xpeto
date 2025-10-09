@@ -2,19 +2,19 @@ package schedule
 
 import "github.com/vistormu/xpeto/core/ecs"
 
-type schedule struct {
-	id         uint64
-	stage      stage
-	system     ecs.System
+type Schedule struct {
+	Id         uint64
+	stage      Stage
+	System     ecs.System
 	before     []uint64
 	after      []uint64
-	conditions []ConditionFn
+	Conditions []ConditionFn
 }
 
-func newSchedule() *schedule {
-	return &schedule{
+func newSchedule() *Schedule {
+	return &Schedule{
 		before:     make([]uint64, 0),
 		after:      make([]uint64, 0),
-		conditions: make([]ConditionFn, 0),
+		Conditions: make([]ConditionFn, 0),
 	}
 }

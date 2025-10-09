@@ -42,7 +42,7 @@ func TestDoubleBufferingAcrossUpdate(t *testing.T) {
 	ecs.SetSystemId(w, 1)
 
 	AddEvent(w, evA{10})
-	Update(w)
+	update(w)
 
 	AddEvent(w, evA{20})
 	AddEvent(w, evA{30})

@@ -5,6 +5,7 @@ import (
 	"github.com/vistormu/xpeto/core/event"
 	"github.com/vistormu/xpeto/core/game"
 	"github.com/vistormu/xpeto/core/schedule"
+	"github.com/vistormu/xpeto/pkg/state"
 )
 
 // #############
@@ -166,11 +167,6 @@ type Game = game.Game
 // should or should not run
 type ConditionFn = schedule.ConditionFn
 
-// ldhn
-func InState[T comparable](s T) ConditionFn {
-	return schedule.InState(s)
-}
-
 // description
 var Once = schedule.Once
 
@@ -210,21 +206,6 @@ var First = schedule.First
 var PreUpdate = schedule.PreUpdate
 
 // description
-func OnExit[T comparable](state T) schedule.StageFn {
-	return schedule.OnExit(state)
-}
-
-// description
-func OnTransition[T comparable](from, to T) schedule.StageFn {
-	return schedule.OnTransition(from, to)
-}
-
-// description
-func OnEnter[T comparable](state T) schedule.StageFn {
-	return schedule.OnEnter(state)
-}
-
-// description
 var FixedFirst = schedule.FixedFirst
 
 // description
@@ -257,21 +238,57 @@ var Draw = schedule.Draw
 // description
 var PostDraw = schedule.PostDraw
 
+// #############
+// CORE PACKAGES
+// #############
+
+// =====
+// state
+// =====
+
+// ---------
+// condition
+// ---------
+
+// ldhn
+func InState[T comparable](s T) ConditionFn {
+	return state.InState(s)
+}
+
+// -----
+// stage
+// -----
+
+// description
+func OnExit[T comparable](s T) schedule.StageFn {
+	return state.OnExit(s)
+}
+
+// description
+func OnTransition[T comparable](from, to T) schedule.StageFn {
+	return state.OnTransition(from, to)
+}
+
+// description
+func OnEnter[T comparable](s T) schedule.StageFn {
+	return state.OnEnter(s)
+}
+
 // -----
 // state
 // -----
 
 // description
 func AddStateMachine[T comparable](sch *Scheduler, initial T) {
-	schedule.AddStateMachine(sch, initial)
+	state.AddStateMachine(sch, initial)
 }
 
 // description
 func GetState[T comparable](w *World) (T, bool) {
-	return schedule.GetState[T](w)
+	return state.GetState[T](w)
 }
 
 // description
 func SetNextState[T comparable](w *World, s T) bool {
-	return schedule.SetNextState(w, s)
+	return state.SetNextState(w, s)
 }

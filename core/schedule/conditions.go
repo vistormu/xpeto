@@ -6,16 +6,6 @@ import (
 
 type ConditionFn = func(*ecs.World) bool
 
-func InState[T comparable](s T) ConditionFn {
-	return func(w *ecs.World) bool {
-		current, ok := GetState[T](w)
-		if !ok {
-			return false
-		}
-		return current == s
-	}
-}
-
 func Once() ConditionFn {
 	done := false
 	return func(w *ecs.World) bool {
