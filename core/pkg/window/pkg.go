@@ -15,6 +15,10 @@ func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 		FullScreen:   false,
 		AntiAliasing: false,
 	})
+	ecs.AddResource(w, Layout{
+		Width:  192,
+		Height: 108,
+	})
 
 	// systems
 	schedule.AddSystem(sch, schedule.PreStartup, applyInitialSettings)

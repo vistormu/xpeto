@@ -2,10 +2,14 @@ package xp
 
 import (
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/event"
-	"github.com/vistormu/xpeto/core/game"
 	"github.com/vistormu/xpeto/core/schedule"
-	"github.com/vistormu/xpeto/pkg/state"
+
+	"github.com/vistormu/xpeto/core/pkg/event"
+	"github.com/vistormu/xpeto/core/pkg/state"
+	"github.com/vistormu/xpeto/core/pkg/time"
+	"github.com/vistormu/xpeto/core/pkg/window"
+
+	"github.com/vistormu/xpeto/game"
 )
 
 // #############
@@ -124,33 +128,6 @@ func Query4[A, B, C, D any](w *World, filters ...Filter) *ecs.Query4[A, B, C, D]
 	return ecs.NewQuery4[A, B, C, D](w, filters...)
 }
 
-// =====
-// event
-// =====
-
-// description
-func AddEvent[T any](w *World, ev T) {
-	event.AddEvent(w, ev)
-}
-
-// description
-func GetEvents[T any](w *World) ([]T, bool) {
-	return event.GetEvents[T](w)
-}
-
-// ====
-// game
-// ====
-
-// ----
-// game
-// ----
-type Game = game.Game
-
-// ------
-// plugin
-// ------
-
 // ========
 // schedule
 // ========
@@ -243,6 +220,20 @@ var PostDraw = schedule.PostDraw
 // #############
 
 // =====
+// event
+// =====
+
+// description
+func AddEvent[T any](w *World, ev T) {
+	event.AddEvent(w, ev)
+}
+
+// description
+func GetEvents[T any](w *World) ([]T, bool) {
+	return event.GetEvents[T](w)
+}
+
+// =====
 // state
 // =====
 
@@ -250,7 +241,7 @@ var PostDraw = schedule.PostDraw
 // condition
 // ---------
 
-// ldhn
+// description
 func InState[T comparable](s T) ConditionFn {
 	return state.InState(s)
 }
@@ -292,3 +283,36 @@ func GetState[T comparable](w *World) (T, bool) {
 func SetNextState[T comparable](w *World, s T) bool {
 	return state.SetNextState(w, s)
 }
+
+// ====
+// time
+// ====
+
+type Clock = time.Clock
+
+// ======
+// window
+// ======
+
+// description
+type Layout = window.Layout
+
+// description
+type Screen = window.Screen
+
+// description
+type WindowSettings = window.WindowSettings
+
+// ================
+// DEFAULT PACKAGES
+// ================
+
+// =========
+// animation
+// =========
+
+// ####
+// GAME
+// ####
+
+type Game = game.Game

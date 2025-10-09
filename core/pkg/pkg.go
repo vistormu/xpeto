@@ -1,4 +1,4 @@
-package game
+package pkg
 
 import (
 	"github.com/vistormu/xpeto/core/ecs"
