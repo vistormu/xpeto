@@ -1,7 +1,10 @@
 package time
 
 import (
+	"math"
 	"time"
+
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/vistormu/xpeto/core/ecs"
 )
@@ -14,107 +17,145 @@ type ClockSettings struct {
 	Scale       float64
 	Paused      bool
 	SyncWithFps bool
+	MaxDelta    time.Duration
+}
+
+type lastClockSettings struct {
+	ClockSettings
 }
 
 // =====
 // clock
 // =====
-type Clock struct {
-	Start     time.Time
-	LastFrame time.Time
-	Elapsed   time.Duration
-	Delta     time.Duration
-	Frame     uint64
+type RealClock struct {
+	Start   time.Time
+	Last    time.Time
+	Delta   time.Duration
+	Clamped time.Duration
+	Elapsed time.Duration
 }
 
-type fixedClock struct {
-	maxFixedSteps int
-	accumulator   time.Duration
-	fixedSteps    int
+type VirtualClock struct {
+	Start   time.Time
+	Delta   time.Duration
+	Elapsed time.Duration
+	Frame   uint64
+}
+
+type FixedClock struct {
+	Timestep    time.Duration
+	Accumulator time.Duration
+	Steps       int
+	MaxSteps    int
 }
 
 // =======
 // systems
 // =======
-func tickClockSystem(w *ecs.World) {
-	clk, ok := ecs.GetResource[Clock](w)
-	if !ok || clk == nil {
-		return
-	}
-	fc, ok := ecs.GetResource[fixedClock](w)
-	if !ok || fc == nil {
-		return
-	}
+func tick(w *ecs.World) {
+	real, _ := ecs.GetResource[RealClock](w)
+	virtual, _ := ecs.GetResource[VirtualClock](w)
+	fixed, _ := ecs.GetResource[FixedClock](w)
+	s, _ := ecs.GetResource[ClockSettings](w)
 
-	// Defaults (used if no ClockSettings present)
-	settings := ClockSettings{
-		FixedDelta:  stdtime.Second / 60, // 60 Hz fixed
-		Scale:       1.0,
-		Paused:      false,
-		SyncWithFps: false,
+	now := time.Now()
+
+	// real clock
+	realDelta := now.Sub(real.Last)
+	real.Last = now
+
+	if realDelta < 0 {
+		realDelta = 0
 	}
-	if cs, ok := ecs.GetResource[ClockSettings](w); ok && cs != nil {
-		settings = *cs
+	real.Delta = realDelta
+
+	real.Elapsed += realDelta
+
+	clamped := realDelta
+	if s.MaxDelta > 0 && clamped > s.MaxDelta {
+		clamped = s.MaxDelta
 	}
+	real.Clamped = clamped
 
-	// Hand off sync to Ebitengine (idempotent; cheap if unchanged).
-	ebiten.SetVsyncEnabled(settings.SyncWithFps)
-
-	// First-tick init
-	if clk.Start.IsZero() {
-		now := stdtime.Now()
-		clk.Start = now
-		clk.LastFrame = now
-	}
-
-	// Real delta from wall clock
-	now := stdtime.Now()
-	realDelta := now.Sub(clk.LastFrame)
-	clk.LastFrame = now
-
-	// Variable (virtual) delta = real * scale (unless paused)
-	var vdt stdtime.Duration
-	if settings.Paused || settings.Scale == 0 {
-		vdt = 0
+	// virtual clock
+	var virtualDelta time.Duration
+	if s.Paused || s.Scale <= 0 {
+		virtualDelta = 0
 	} else {
-		vdt = stdtime.Duration(float64(realDelta) * settings.Scale)
+		scaled := float64(clamped) * s.Scale
+		virtualDelta = time.Duration(scaled)
 	}
 
-	// Update frame clock
-	clk.Delta = vdt
-	clk.Elapsed += vdt
-	clk.Frame++
+	virtual.Delta = virtualDelta
+	virtual.Elapsed += virtualDelta
 
-	// --- Fixed-step accumulation ---
-	if fc.maxFixedSteps <= 0 {
-		fc.maxFixedSteps = 8 // avoid spiral-of-death
-	}
+	virtual.Frame++
 
-	fd := settings.FixedDelta
-	fc.accumulator += vdt
+	// fixed clock
+	fixed.Accumulator += virtualDelta
 
 	steps := 0
-	for fd > 0 && fc.accumulator >= fd && steps < fc.maxFixedSteps {
-		fc.accumulator -= fd
+	for fixed.Timestep > 0 && fixed.Accumulator >= fixed.Timestep && steps < fixed.MaxSteps {
+		fixed.Accumulator -= fixed.Timestep
 		steps++
 	}
-	fc.fixedSteps = steps
+
+	fixed.Steps = steps
 }
 
-// Helpers your scheduler/systems can call:
+func applyInitialSettings(w *ecs.World) {
+	real, _ := ecs.GetResource[RealClock](w)
+	virtual, _ := ecs.GetResource[VirtualClock](w)
+	s, _ := ecs.GetResource[ClockSettings](w)
 
-// FixedStepsThisFrame returns how many times to run the fixed stages this frame.
-func FixedStepsThisFrame(w *ecs.World) int {
-	if fc, ok := ecs.GetResource[fixedClock](w); ok && fc != nil {
-		return fc.fixedSteps
+	// set initial time
+	now := time.Now()
+	if real.Start.IsZero() {
+		real.Start = now
+		real.Last = now
 	}
-	return 0
+	if virtual.Start.IsZero() {
+		virtual.Start = now
+	}
+
+	// add internal resouce to track changes
+	ecs.AddResource(w, lastClockSettings{*s})
 }
 
-// FixedDelta returns the constant dt each fixed tick should use.
-func FixedDelta(w *ecs.World) stdtime.Duration {
-	if cs, ok := ecs.GetResource[ClockSettings](w); ok && cs != nil && cs.FixedDelta > 0 {
-		return cs.FixedDelta
+func applyChanges(w *ecs.World) {
+	fixed, _ := ecs.GetResource[FixedClock](w)
+	s, _ := ecs.GetResource[ClockSettings](w)
+	ls, _ := ecs.GetResource[lastClockSettings](w)
+
+	// sync with fps
+	if s.SyncWithFps != ls.SyncWithFps {
+		if s.SyncWithFps {
+			ebiten.SetTPS(ebiten.SyncWithFPS)
+		}
+		ls.SyncWithFps = s.SyncWithFps
 	}
-	return stdtime.Second / 60
+
+	// fixed delta
+	if !s.SyncWithFps && s.FixedDelta != ls.FixedDelta {
+		if s.FixedDelta <= 0 {
+			ebiten.SetTPS(ebiten.DefaultTPS)
+			fixed.Timestep = time.Second / time.Duration(ebiten.DefaultTPS)
+		} else {
+			hz := 1.0 / s.FixedDelta.Seconds()
+			tps := int(math.Round(hz))
+			if tps < 1 {
+				tps = 1
+			} else if tps > 10_000 {
+				tps = 10_000
+			}
+			ebiten.SetTPS(tps)
+			fixed.Timestep = s.FixedDelta
+		}
+
+		ls.FixedDelta = s.FixedDelta
+	}
+
+	ls.Scale = s.Scale
+	ls.Paused = s.Paused
+	ls.MaxDelta = s.MaxDelta
 }

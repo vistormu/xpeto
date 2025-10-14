@@ -14,6 +14,7 @@ type Scheduler struct {
 	labelToId    map[string]uint64
 	nextId       uint64
 	extra        *hashmap.TypeMap
+	fixedStepsFn func(*ecs.World) int
 }
 
 func NewScheduler() *Scheduler {
@@ -80,15 +81,36 @@ func (sch *Scheduler) RunStartup(w *ecs.World) {
 //
 // it should only be called by the `xp.Game` struct
 func (sch *Scheduler) RunUpdate(w *ecs.World) {
+	// first pass
 	stages := []Stage{
 		first,
 		preUpdate,
 		stateTransition,
+	}
+	sch.run(w, stages)
+
+	// fixed pass
+	steps := 0
+	if sch.fixedStepsFn != nil {
+		n := sch.fixedStepsFn(w)
+		if n > 0 {
+			steps = n
+		}
+	}
+	stages = []Stage{
 		fixedFirst,
 		fixedPreUpdate,
 		fixedUpdate,
 		fixedPostUpdate,
 		fixedLast,
+	}
+
+	for range steps {
+		sch.run(w, stages)
+	}
+
+	// last pass
+	stages = []Stage{
 		update,
 		postUpdate,
 		last,
@@ -102,6 +124,13 @@ func (sch *Scheduler) RunUpdate(w *ecs.World) {
 func (sch *Scheduler) RunDraw(w *ecs.World) {
 	stages := []Stage{preDraw, draw, postDraw}
 	sch.run(w, stages)
+}
+
+// THIS METHOD SHOULD NOT BE CALLED
+//
+// it sets the number of steps for the fixed stage, set by the `Time` pkg
+func (sch *Scheduler) SetFixedStepsFn(fn func(*ecs.World) int) {
+	sch.fixedStepsFn = fn
 }
 
 // ===

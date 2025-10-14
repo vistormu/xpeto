@@ -30,10 +30,7 @@ func applyInitialSettings(w *ecs.World) {
 }
 
 func applyChanges(w *ecs.World) {
-	ws, ok := ecs.GetResource[WindowSettings](w)
-	if !ok || ws == nil {
-		return
-	}
+	ws, _ := ecs.GetResource[WindowSettings](w)
 	applied, _ := ecs.GetResource[lastSettings](w)
 
 	if ws.Width != applied.Width || ws.Height != applied.Height {
