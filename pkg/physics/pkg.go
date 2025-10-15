@@ -1,13 +1,13 @@
 package physics
 
 import (
-	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/schedule"
+	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/schedule"
 )
 
-func Plugin(ctx *core.Context, sch *schedule.Scheduler) {
+func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	// resources
-	core.AddResource(ctx, &Settings{})
+	ecs.AddResource(w, &Settings{})
 
 	// systems
 	schedule.AddSystem(sch, schedule.FixedUpdate, applyGravity)

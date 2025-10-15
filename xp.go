@@ -2,6 +2,7 @@ package xp
 
 import (
 	"github.com/vistormu/xpeto/app"
+	"github.com/vistormu/xpeto/pkg"
 
 	"github.com/vistormu/xpeto/core/ecs"
 	"github.com/vistormu/xpeto/core/schedule"
@@ -101,7 +102,7 @@ func GetResource[T any](w *World) (*T, bool) {
 
 // the type `T` of the function cannot be a reference to a type
 // if it is, it will return false
-func RemoveResorce[T any](w *World) bool {
+func RemoveResource[T any](w *World) bool {
 	return ecs.RemoveResource[T](w)
 }
 
@@ -362,6 +363,8 @@ const Headless = app.Headless
 // DEFAULT PACKAGES
 // ################
 
+var DefaultPkgs = pkg.DefaultPkgs
+
 // =====
 // asset
 // =====
@@ -452,6 +455,8 @@ const (
 	KeyD = input.KeyD
 	KeyS = input.KeyS
 	KeyW = input.KeyW
+
+	KeyEnter = input.KeyEnter
 
 	KeyArrowDown = input.KeyArrowDown
 	KeyArrowUp   = input.KeyArrowUp

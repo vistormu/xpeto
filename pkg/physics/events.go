@@ -1,6 +1,6 @@
 package physics
 
-import "github.com/vistormu/xpeto/internal/ecs"
+import "github.com/vistormu/xpeto/core/ecs"
 
 type EventCollisionType uint8
 

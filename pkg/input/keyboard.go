@@ -18,6 +18,8 @@ const (
 	KeyS = ebiten.KeyS
 	KeyW = ebiten.KeyW
 
+	KeyEnter = ebiten.KeyEnter
+
 	KeyArrowDown = ebiten.KeyArrowDown
 	KeyArrowUp   = ebiten.KeyArrowUp
 )

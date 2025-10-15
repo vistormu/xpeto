@@ -20,7 +20,7 @@ func (r *ebitenRunner) Update() error {
 func (r *ebitenRunner) Draw(screen *ebiten.Image) {
 	ecs.AddResource(r.app.world, screen)
 	r.app.scheduler.RunDraw(r.app.world)
-	ecs.RemoveResource[window.Screen](r.app.world)
+	ecs.RemoveResource[ebiten.Image](r.app.world)
 }
 
 func (r *ebitenRunner) Layout(w, h int) (int, int) {

@@ -1,11 +1,8 @@
 package physics
 
-import (
-	"github.com/vistormu/xpeto/internal/core"
-)
-
 type Settings struct {
-	Gravity  core.Vector[float32]
+	GravityX float64
+	GravityY float64
 	CellSize float64
 }
 

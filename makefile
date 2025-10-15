@@ -24,7 +24,7 @@ build: clean
 	mv $(dist_dir)/$(project_name) $(dist_dir)/$(project_name)_darwin_amd64
 
 
-upload: build
+upload:
 	git add .
 	git commit -m "release v$(version)"
 	git tag -a v$(version) -m "release v$(version)"

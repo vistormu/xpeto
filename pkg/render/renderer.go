@@ -6,7 +6,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg/window"
 )
 
 type Renderable interface {
@@ -15,7 +14,7 @@ type Renderable interface {
 }
 
 func draw(w *ecs.World) {
-	screen, _ := ecs.GetResource[window.Screen](w)
+	screen, _ := ecs.GetResource[ebiten.Image](w)
 	e, _ := ecs.GetResource[extractor](w)
 
 	// extraction

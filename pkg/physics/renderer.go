@@ -3,8 +3,7 @@ package physics
 import (
 	"image/color"
 
-	// "github.com/hajimehoshi/ebiten/v2"
-	"github.com/vistormu/xpeto/internal/core"
+	"github.com/vistormu/xpeto/core/ecs"
 )
 
 // Transient per-frame draw list (populated by the collector, consumed by the renderer)
@@ -24,6 +23,5 @@ type debugLine struct {
 	Col            color.Color
 }
 
-func debugRenderer(ctx *core.Context) {
-	// screen := core.MustResource[*ebiten.Image](ctx)
+func debugRenderer(w *ecs.World) {
 }

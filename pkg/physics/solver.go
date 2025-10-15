@@ -3,62 +3,53 @@ package physics
 import (
 	"math"
 
-	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/ecs"
-	"github.com/vistormu/xpeto/pkg/time"
-	"github.com/vistormu/xpeto/pkg/transform"
+	"github.com/vistormu/go-dsa/set"
+	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/pkg/time"
+	"github.com/vistormu/xpeto/core/pkg/transform"
 )
 
-func applyGravity(ctx *core.Context) {
-	ps := core.MustResource[*Settings](ctx)
-	w := core.MustResource[*ecs.World](ctx)
-	t := core.MustResource[*time.Time](ctx)
+func applyGravity(w *ecs.World) {
+	ps, _ := ecs.GetResource[Settings](w)
+	clk, _ := ecs.GetResource[time.FixedClock](w)
 
-	entities := w.Query(ecs.And(
-		ecs.Has[*Velocity](),
-		ecs.Has[*RigidBody](),
-	))
+	q := ecs.NewQuery2[Velocity, RigidBody](w)
 
-	for _, e := range entities {
-		v, _ := ecs.GetComponent[*Velocity](w, e)
-		rb, _ := ecs.GetComponent[*RigidBody](w, e)
-		gs, ok := ecs.GetComponent[*GravityScale](w, e)
+	for _, b := range q.Iter() {
+		v := b.A()
+		rb := b.B()
 
 		if rb.Type != Dynamic {
 			continue
 		}
 
 		scale := 1.0
+		gs, ok := ecs.GetComponent[GravityScale](w, b.Entity())
 		if ok {
 			scale = gs.Value
 		}
 
-		v.Y += float64(ps.Gravity.Y) * scale * t.FixedDelta.Seconds()
-		v.X += float64(ps.Gravity.X) * scale * t.FixedDelta.Seconds()
+		v.Y += float64(ps.GravityY) * scale * clk.Timestep.Seconds()
+		v.X += float64(ps.GravityX) * scale * clk.Timestep.Seconds()
 	}
 }
 
-func integrateVelocities(ctx *core.Context) {
-	w := core.MustResource[*ecs.World](ctx)
-	t := core.MustResource[*time.Time](ctx)
+func integrateVelocities(w *ecs.World) {
+	clk, _ := ecs.GetResource[time.FixedClock](w)
 
-	entities := w.Query(ecs.And(
-		ecs.Has[*Velocity](),
-		ecs.Has[*RigidBody](),
-		ecs.Has[*transform.Transform](),
-	))
+	q := ecs.NewQuery3[Velocity, RigidBody, transform.Transform](w)
 
-	for _, e := range entities {
-		v, _ := ecs.GetComponent[*Velocity](w, e)
-		rb, _ := ecs.GetComponent[*RigidBody](w, e)
-		tr, _ := ecs.GetComponent[*transform.Transform](w, e)
+	for _, b := range q.Iter() {
+		v := b.A()
+		rb := b.B()
+		tr := b.C()
 
 		if rb.Type == Static {
 			continue
 		}
 
-		tr.Position.X += float32(v.X) * float32(t.FixedDelta.Seconds())
-		tr.Position.Y += float32(v.Y) * float32(t.FixedDelta.Seconds())
+		tr.X += v.X * clk.Timestep.Seconds()
+		tr.Y += v.Y * clk.Timestep.Seconds()
 	}
 }
 
@@ -79,27 +70,23 @@ func NewCollisionSolver() *CollisionSolver {
 	}
 }
 
-func (cs *CollisionSolver) buildBroadPhase(ctx *core.Context) {
-	ps := core.MustResource[*Settings](ctx)
-	w := core.MustResource[*ecs.World](ctx)
+func (cs *CollisionSolver) buildBroadPhase(w *ecs.World) {
+	ps, _ := ecs.GetResource[Settings](w)
 
 	for i := range cs.cells {
 		delete(cs.cells, i)
 	}
 
-	entities := w.Query(ecs.And(
-		ecs.Has[*transform.Transform](),
-		ecs.Has[*Aabb](),
-	))
+	q := ecs.NewQuery2[Aabb, transform.Transform](w)
 
-	for _, e := range entities {
-		tr, _ := ecs.GetComponent[*transform.Transform](w, e)
-		a, _ := ecs.GetComponent[*Aabb](w, e)
+	for _, b := range q.Iter() {
+		a := b.A()
+		tr := b.B()
 
-		minX := float64(tr.Position.X) - a.HalfWidth
-		minY := float64(tr.Position.Y) - a.HalfHeight
-		maxX := float64(tr.Position.X) + a.HalfWidth
-		maxY := float64(tr.Position.Y) + a.HalfHeight
+		minX := tr.X - a.HalfWidth
+		minY := tr.Y - a.HalfHeight
+		maxX := tr.X + a.HalfWidth
+		maxY := tr.Y + a.HalfHeight
 
 		cX0, cY0 := int(minX/ps.CellSize), int(minY/ps.CellSize)
 		cX1, cY1 := int(maxX/ps.CellSize), int(maxY/ps.CellSize)
@@ -107,28 +94,26 @@ func (cs *CollisionSolver) buildBroadPhase(ctx *core.Context) {
 		for cY := cY0; cY <= cY1; cY++ {
 			for cX := cX0; cX <= cX1; cX++ {
 				key := [2]int{cX, cY}
-				cs.cells[key] = append(cs.cells[key], e)
+				cs.cells[key] = append(cs.cells[key], b.Entity())
 			}
 		}
 
 	}
 }
 
-func (cs *CollisionSolver) narrowPhaseAABB(ctx *core.Context) {
-	w := core.MustResource[*ecs.World](ctx)
-
+func (cs *CollisionSolver) narrowPhaseAABB(w *ecs.World) {
 	cs.contacts = cs.contacts[:0]
-	seen := core.NewHashSet[[2]ecs.Entity]()
+	seen := set.NewHashSet[[2]ecs.Entity]()
 
 	getBox := func(e ecs.Entity) (x, y, hw, hh float64, ok bool) {
-		tr, ok1 := ecs.GetComponent[*transform.Transform](w, e)
-		a, ok2 := ecs.GetComponent[*Aabb](w, e)
+		tr, ok1 := ecs.GetComponent[transform.Transform](w, e)
+		a, ok2 := ecs.GetComponent[Aabb](w, e)
 
 		if !ok1 || !ok2 {
 			return
 		}
 
-		return float64(tr.Position.X), float64(tr.Position.Y), a.HalfWidth, a.HalfHeight, true
+		return tr.X, tr.Y, a.HalfWidth, a.HalfHeight, true
 	}
 
 	for _, list := range cs.cells {
@@ -174,27 +159,25 @@ func (cs *CollisionSolver) narrowPhaseAABB(ctx *core.Context) {
 
 }
 
-func (cs *CollisionSolver) resolveContactsAABB(ctx *core.Context) {
-	w := core.MustResource[*ecs.World](ctx)
-
+func (cs *CollisionSolver) resolveContactsAABB(w *ecs.World) {
 	for _, c := range cs.contacts {
 		// components
-		tra, _ := ecs.GetComponent[*transform.Transform](w, c.a)
-		trb, _ := ecs.GetComponent[*transform.Transform](w, c.b)
+		tra, _ := ecs.GetComponent[transform.Transform](w, c.a)
+		trb, _ := ecs.GetComponent[transform.Transform](w, c.b)
 
-		rba, _ := ecs.GetComponent[*RigidBody](w, c.a)
-		rbb, _ := ecs.GetComponent[*RigidBody](w, c.b)
+		rba, _ := ecs.GetComponent[RigidBody](w, c.a)
+		rbb, _ := ecs.GetComponent[RigidBody](w, c.b)
 
-		va, _ := ecs.GetComponent[*Velocity](w, c.a)
-		vb, _ := ecs.GetComponent[*Velocity](w, c.b)
+		va, _ := ecs.GetComponent[Velocity](w, c.a)
+		vb, _ := ecs.GetComponent[Velocity](w, c.b)
 
 		// TODO: collision filtering
 
 		if c.penX < c.penY {
-			dir := math.Copysign(1.0, float64(trb.Position.X-tra.Position.X))
+			dir := math.Copysign(1.0, trb.X-tra.X)
 			resolveX(tra, trb, rba, rbb, dir*c.penX*0.5, va, vb)
 		} else {
-			dir := math.Copysign(1.0, float64(trb.Position.Y-tra.Position.Y))
+			dir := math.Copysign(1.0, trb.Y-tra.Y)
 			resolveY(tra, trb, rba, rbb, dir*c.penY*0.5, va, vb)
 		}
 	}
@@ -207,15 +190,15 @@ func resolveX(tra, trb *transform.Transform, rba, rbb *RigidBody, mtv float64, v
 
 	switch {
 	case rba.Type != Static && rbb.Type != Static:
-		tra.Position = tra.Position.Add(core.Vector[float32]{X: float32(-mtv), Y: 0})
-		trb.Position = trb.Position.Add(core.Vector[float32]{X: float32(mtv), Y: 0})
+		tra.X -= mtv
+		trb.X += mtv
 		va.X = 0
 		vb.X = 0
 	case rbb.Type == Static:
-		tra.Position = tra.Position.Add(core.Vector[float32]{X: float32(-mtv * 2), Y: 0})
+		tra.X -= mtv * 2
 		va.X = 0
 	case rba.Type == Static:
-		trb.Position = trb.Position.Add(core.Vector[float32]{X: float32(mtv * 2), Y: 0})
+		trb.X += mtv * 2
 		vb.X = 0
 	}
 
@@ -228,15 +211,15 @@ func resolveY(tra, trb *transform.Transform, rba, rbb *RigidBody, mtv float64, v
 
 	switch {
 	case rba.Type != Static && rbb.Type != Static:
-		tra.Position = tra.Position.Add(core.Vector[float32]{Y: float32(-mtv), X: 0})
-		trb.Position = trb.Position.Add(core.Vector[float32]{Y: float32(mtv), X: 0})
+		tra.Y -= mtv
+		trb.Y += mtv
 		va.Y = 0
 		vb.Y = 0
 	case rbb.Type == Static:
-		tra.Position = tra.Position.Add(core.Vector[float32]{Y: float32(-mtv * 2), X: 0})
+		tra.Y -= mtv * 2
 		va.Y = 0
 	case rba.Type == Static:
-		trb.Position = trb.Position.Add(core.Vector[float32]{Y: float32(mtv * 2), X: 0})
+		trb.Y += mtv * 2
 		vb.Y = 0
 	}
 
