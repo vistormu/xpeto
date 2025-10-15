@@ -71,7 +71,7 @@ func (sch *Scheduler) run(w *ecs.World, stages []Stage) {
 
 // THIS METHOD SHOULD NOT BE CALLED
 //
-// it should only be called by the `xp.Game` struct
+// it should only be called by the `xp.App` struct
 func (sch *Scheduler) RunStartup(w *ecs.World) {
 	stages := []Stage{preStartup, startup, postStartup}
 	sch.run(w, stages)
@@ -79,7 +79,7 @@ func (sch *Scheduler) RunStartup(w *ecs.World) {
 
 // THIS METHOD SHOULD NOT BE CALLED
 //
-// it should only be called by the `xp.Game` struct
+// it should only be called by the `xp.App` struct
 func (sch *Scheduler) RunUpdate(w *ecs.World) {
 	// first pass
 	stages := []Stage{
@@ -120,10 +120,17 @@ func (sch *Scheduler) RunUpdate(w *ecs.World) {
 
 // THIS METHOD SHOULD NOT BE CALLED
 //
-// it should only be called by the `xp.Game` struct
+// it should only be called by the `xp.App` struct
 func (sch *Scheduler) RunDraw(w *ecs.World) {
 	stages := []Stage{preDraw, draw, postDraw}
 	sch.run(w, stages)
+}
+
+// THIS METHOD SHOULD NOT BE CALLED
+//
+// it should only be called by the `xp.App` struct
+func (sch *Scheduler) RunExit(w *ecs.World) {
+	sch.run(w, []Stage{exit})
 }
 
 // THIS METHOD SHOULD NOT BE CALLED

@@ -27,6 +27,8 @@ const (
 	preDraw
 	draw
 	postDraw
+
+	exit
 )
 
 // startup
@@ -54,3 +56,6 @@ func Last(*Scheduler, *Schedule) Stage       { return last }
 func PreDraw(*Scheduler, *Schedule) Stage  { return preDraw }
 func Draw(*Scheduler, *Schedule) Stage     { return draw }
 func PostDraw(*Scheduler, *Schedule) Stage { return postDraw }
+
+// exit
+func Exit(*Scheduler, *Schedule) Stage { return exit }

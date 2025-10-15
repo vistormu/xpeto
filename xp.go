@@ -288,7 +288,25 @@ func SetNextState[T comparable](w *World, s T) bool {
 // time
 // ====
 
-type Clock = time.Clock
+// -----
+// clock
+// -----
+
+// description
+type ClockSettings = time.ClockSettings
+
+// description
+type RealClock = time.RealClock
+
+// description
+type VirtualClock = time.VirtualClock
+
+// description
+type FixedClock = time.FixedClock
+
+// ---------
+// condition
+// ---------
 
 // ======
 // window
