@@ -68,3 +68,37 @@ func TestOnceAndOnceWhen(t *testing.T) {
 		t.Fatalf("OnceWhen ran %d times", ran)
 	}
 }
+
+func TestOrderingWithinStage(t *testing.T) {
+	w := ecs.NewWorld()
+	sch := NewScheduler()
+
+	got := make([]string, 0, 3)
+	sys := func(name string) ecs.System {
+		return func(*ecs.World) { got = append(got, name) }
+	}
+
+	AddSystem(sch, Update, sys("A")).Label("A")
+	AddSystem(sch, Update, sys("B")).Label("B")
+	AddSystem(sch, Update, sys("C")).Label("C")
+
+	sch.After("A")
+	sch.Before("C")
+
+	sch = NewScheduler()
+	AddSystem(sch, Update, sys("A")).Label("A")
+	AddSystem(sch, Update, sys("B")).Label("B").Before("C")
+	AddSystem(sch, Update, sys("C")).Label("C").After("A")
+
+	sch.RunUpdate(w)
+
+	want := []string{"A", "B", "C"}
+	if len(got) != len(want) {
+		t.Fatalf("len mismatch: got %v want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("order mismatch at %d: got %q want %q", i, got[i], want[i])
+		}
+	}
+}

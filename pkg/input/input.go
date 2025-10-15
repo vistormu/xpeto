@@ -1,25 +1,25 @@
 package input
 
 import (
-	"github.com/vistormu/xpeto/internal/core"
+	"github.com/vistormu/go-dsa/set"
 )
 
 // ======
 // button
 // ======
 type ButtonInput[T comparable] struct {
-	pressed        *core.HashSet[T]
+	pressed        *set.HashSet[T]
 	pressDurations map[T]int
-	justPressed    *core.HashSet[T]
-	justReleased   *core.HashSet[T]
+	justPressed    *set.HashSet[T]
+	justReleased   *set.HashSet[T]
 }
 
 func newButtonInput[T comparable]() *ButtonInput[T] {
 	return &ButtonInput[T]{
-		pressed:        core.NewHashSet[T](),
+		pressed:        set.NewHashSet[T](),
 		pressDurations: make(map[T]int, 0),
-		justPressed:    core.NewHashSet[T](),
-		justReleased:   core.NewHashSet[T](),
+		justPressed:    set.NewHashSet[T](),
+		justReleased:   set.NewHashSet[T](),
 	}
 }
 

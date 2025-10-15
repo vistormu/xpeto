@@ -11,9 +11,11 @@ import (
 
 type Align = ebitext.Align
 
-var AlignStart Align = ebitext.AlignStart
-var AlignCenter Align = ebitext.AlignCenter
-var AlignEnd Align = ebitext.AlignEnd
+const (
+	AlignStart  Align = ebitext.AlignStart
+	AlignCenter Align = ebitext.AlignCenter
+	AlignEnd    Align = ebitext.AlignEnd
+)
 
 type Text struct {
 	Font    asset.Handle

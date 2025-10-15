@@ -3,53 +3,43 @@ package text
 import (
 	ebitext "github.com/hajimehoshi/ebiten/v2/text/v2"
 
-	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/ecs"
+	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/pkg/transform"
 
 	"github.com/vistormu/xpeto/pkg/asset"
 	"github.com/vistormu/xpeto/pkg/font"
 	"github.com/vistormu/xpeto/pkg/render"
-	"github.com/vistormu/xpeto/pkg/transform"
 )
 
 func packKey(layer, order uint16) uint64 {
 	return (uint64(layer) << 16) | uint64(order)
 }
 
-func extractTexts(ctx *core.Context) []render.Renderable {
-	w := core.MustResource[*ecs.World](ctx)
-	entities := w.Query(ecs.And(
-		ecs.Has[*Text](),
-		ecs.Has[*transform.Transform](),
-	))
-
-	as, ok := core.GetResource[*asset.Server](ctx)
-	if !ok {
-		return nil
-	}
+func extractTexts(w *ecs.World) []render.Renderable {
+	q := ecs.NewQuery2[Text, transform.Transform](w)
 
 	renderables := make([]render.Renderable, 0)
-	for _, e := range entities {
+	for _, b := range q.Iter() {
 		// components
-		transform, _ := ecs.GetComponent[*transform.Transform](w, e)
-		text, _ := ecs.GetComponent[*Text](w, e)
+		txt := b.A()
+		tr := b.B()
 
 		// load asset
-		fnt, ok := asset.GetAsset[*font.Font](as, text.Font)
+		fnt, ok := asset.GetAsset[*font.Font](w, txt.Font)
 		if !ok || fnt == nil {
 			continue
 		}
 
 		item := &textItem{
-			face:    &ebitext.GoTextFace{Source: fnt.Face, Size: text.Size},
-			content: text.Content,
-			align:   text.Align,
-			color:   text.Color,
-			x:       float64(transform.Position.X),
-			y:       float64(transform.Position.Y),
-			layer:   text.Layer,
-			order:   text.Order,
-			key:     packKey(text.Layer, text.Order),
+			face:    &ebitext.GoTextFace{Source: fnt.Face, Size: txt.Size},
+			content: txt.Content,
+			align:   txt.Align,
+			color:   txt.Color,
+			x:       tr.X,
+			y:       tr.Y,
+			layer:   txt.Layer,
+			order:   txt.Order,
+			key:     packKey(txt.Layer, txt.Order),
 		}
 		renderables = append(renderables, item)
 	}

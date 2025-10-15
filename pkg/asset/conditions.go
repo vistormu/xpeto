@@ -1,14 +1,14 @@
 package asset
 
 import (
-	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/schedule"
+	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/schedule"
 )
 
 // TODO: should i use get state?
-func IsLoaded[B any]() schedule.ConditionFn {
-	return func(ctx *core.Context) bool {
-		_, ok := core.GetResource[B](ctx)
+func IsAssetLoaded[B any]() schedule.ConditionFn {
+	return func(w *ecs.World) bool {
+		_, ok := ecs.GetResource[B](w)
 		return ok
 	}
 }

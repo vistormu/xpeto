@@ -6,8 +6,13 @@ import (
 	_ "image/png"
 	"io"
 
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
+
+type Image struct {
+	Img *ebiten.Image
+}
 
 func loadImage(reader io.Reader) (any, error) {
 	data, err := io.ReadAll(reader)

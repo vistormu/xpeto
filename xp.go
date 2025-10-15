@@ -1,15 +1,24 @@
 package xp
 
 import (
+	"github.com/vistormu/xpeto/app"
+
 	"github.com/vistormu/xpeto/core/ecs"
 	"github.com/vistormu/xpeto/core/schedule"
 
 	"github.com/vistormu/xpeto/core/pkg/event"
 	"github.com/vistormu/xpeto/core/pkg/state"
 	"github.com/vistormu/xpeto/core/pkg/time"
+	"github.com/vistormu/xpeto/core/pkg/transform"
 	"github.com/vistormu/xpeto/core/pkg/window"
 
-	"github.com/vistormu/xpeto/game"
+	"github.com/vistormu/xpeto/pkg/asset"
+	"github.com/vistormu/xpeto/pkg/font"
+	"github.com/vistormu/xpeto/pkg/image"
+	"github.com/vistormu/xpeto/pkg/input"
+	"github.com/vistormu/xpeto/pkg/sprite"
+	"github.com/vistormu/xpeto/pkg/text"
+	"github.com/vistormu/xpeto/pkg/vector"
 )
 
 // #############
@@ -60,7 +69,7 @@ func RemoveComponent[T any](w *World, e Entity) bool {
 // system
 // ------
 
-// a system operates on the components of entitues
+// a system operates on the components of entities
 type System = ecs.System
 
 // `GetSystemId` retrieves the unique identifier of the current running system
@@ -308,6 +317,13 @@ type FixedClock = time.FixedClock
 // condition
 // ---------
 
+// =========
+// transform
+// =========
+
+// description
+type Transform = transform.Transform
+
 // ======
 // window
 // ======
@@ -321,16 +337,165 @@ type Screen = window.Screen
 // description
 type WindowSettings = window.WindowSettings
 
-// ================
+// ###
+// APP
+// ###
+
+// ===
+// app
+// ===
+
+// description
+var NewApp = app.NewApp
+
+// =======
+// runners
+// =======
+
+// description
+const Ebiten = app.Ebiten
+
+// description
+const Headless = app.Headless
+
+// ################
 // DEFAULT PACKAGES
-// ================
+// ################
 
-// =========
-// animation
-// =========
+// =====
+// asset
+// =====
 
-// ####
-// GAME
-// ####
+// ---------
+// condition
+// ---------
 
-type Game = game.Game
+// description
+func IsAssetLoaded[B any]() ConditionFn {
+	return asset.IsAssetLoaded[B]()
+}
+
+// -----
+// event
+// -----
+
+// ------
+// handle
+// ------
+
+// description
+type Handle = asset.Handle
+
+// ------
+// loader
+// ------
+
+// ------
+// server
+// ------
+
+// description
+var SetFileSystem = asset.SetFileSystem
+
+// description
+var AddAssetLoader = asset.AddAssetLoader
+
+// description
+func AddAssets[T, B any](w *World) {
+	asset.AddAssets[T, B](w)
+}
+
+// description
+func GetAsset[T any](w *World, handle Handle) (T, bool) {
+	return asset.GetAsset[T](w, handle)
+}
+
+// =====
+// audio
+// =====
+
+// ====
+// font
+// ====
+
+// description
+type Font = font.Font
+
+// =====
+// image
+// =====
+
+// description
+type Image = image.Image
+
+// =====
+// input
+// =====
+
+// ------
+// events
+// ------
+
+// -------
+// gamepad
+// -------
+
+// --------
+// keyboard
+// --------
+
+// description
+type Key = input.Key
+
+const (
+	KeyA = input.KeyA
+	KeyD = input.KeyD
+	KeyS = input.KeyS
+	KeyW = input.KeyW
+
+	KeyArrowDown = input.KeyArrowDown
+	KeyArrowUp   = input.KeyArrowUp
+)
+
+// description
+type Keyboard = input.Keyboard
+
+// -----
+// mouse
+// -----
+
+// description
+type Mouse = input.Mouse
+
+// ======
+// render
+// ======
+
+// ======
+// sprite
+// ======
+
+// description
+type Sprite = sprite.Sprite
+
+// ====
+// text
+// ====
+
+const (
+	AlignStart  = text.AlignStart
+	AlignCenter = text.AlignCenter
+	AlignEnd    = text.AlignEnd
+)
+
+type Text = text.Text
+
+// ======
+// vector
+// ======
+
+// description
+type Circle = vector.Circle
+
+// description
+type Rect = vector.Rect

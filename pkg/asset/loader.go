@@ -2,28 +2,45 @@ package asset
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"reflect"
 
-	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/event"
+	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/pkg/event"
 )
 
-func Update(ctx *core.Context) {
-	as, ok := core.GetResource[*Server](ctx)
-	if !ok {
-		return
-	}
+type LoadState uint8
 
-	eb := core.MustResource[*event.Bus](ctx)
+const (
+	NotFound LoadState = iota
+	Loading
+	Loaded
+	Failed
+)
+
+type loaderFn = func(reader io.Reader) (any, error)
+
+type loadRequest struct {
+	path       string
+	bundle     any
+	bundleType reflect.Type
+	handle     Handle
+	assetType  reflect.Type
+	loaderFn   loaderFn
+}
+
+func update(w *ecs.World) {
+	as, _ := ecs.GetResource[Server](w)
 
 	for !as.pending.IsEmpty() {
 		req, _ := as.pending.Dequeue()
 
 		// immediately add the asset to the context
-		core.AddResourceByType(ctx, req.Bundle, req.BundleType)
+		ecs.AddResourceByType(w, req.bundle, req.bundleType)
 
 		// load asset asynchronously
-		go func(r LoadRequest) {
+		go func(r loadRequest) {
 			defer func() {
 				if rec := recover(); rec != nil {
 					as.completed <- loadResult{r, nil,
@@ -31,13 +48,13 @@ func Update(ctx *core.Context) {
 				}
 			}()
 
-			file, err := as.fsys.Open(r.Path)
+			file, err := as.fsys.Open(r.path)
 			if err != nil {
 				as.completed <- loadResult{r, nil, err}
 				return
 			}
 
-			content, err := r.LoaderFn(file)
+			content, err := r.loaderFn(file)
 			as.completed <- loadResult{r, content, err}
 		}(req)
 	}
@@ -47,20 +64,19 @@ func Update(ctx *core.Context) {
 		select {
 		case res := <-as.completed:
 			if res.err != nil {
-				as.loadStates[res.req.Path] = Failed
-				as.registered.RemoveByKey(res.req.Path)
-				log.Printf("asset with path %s could not be loaded", res.req.Path)
+				as.loadStates[res.req.path] = Failed
+				as.registered.RemoveByKey(res.req.path)
+				log.Printf("asset with path %s could not be loaded", res.req.path)
 
 				return
 			}
 
 			// add the asset to the store
-			StoreAssetByType(as, res.req.AssetType, res.req.Handle, res.content)
+			storeAssetByType(as, res.req.assetType, res.req.handle, res.content)
 
 			// notify the state of the new asset
-			event.Publish(eb, AssetEvent{
-				Handle: res.req.Handle,
-				Kind:   Added,
+			event.AddEvent(w, EventAssetAdded{
+				Handle: res.req.handle,
 			})
 
 		default:

@@ -1,17 +1,17 @@
 package input
 
-type KeyJustPressed struct {
+type EventKeyJustPressed struct {
 	Key Key
 }
 
-type KeyJustReleased struct {
+type EventKeyJustReleased struct {
 	Key Key
 }
 
-type MouseButtonJustPressed struct {
+type EventMouseButtonJustPressed struct {
 	Button MouseButton
 }
 
-type MouseButtonJustReleased struct {
+type EventMouseButtonJustReleased struct {
 	Button MouseButton
 }

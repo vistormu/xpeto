@@ -159,3 +159,7 @@ func applyChanges(w *ecs.World) {
 	ls.Paused = s.Paused
 	ls.MaxDelta = s.MaxDelta
 }
+
+// ===
+// API
+// ===

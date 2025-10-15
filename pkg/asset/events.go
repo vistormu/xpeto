@@ -1,14 +1,13 @@
 package asset
 
-type AssetEvent struct {
+type EventAssetAdded struct {
 	Handle Handle
-	Kind   AssetEventKind
 }
 
-type AssetEventKind uint8
+type EventAssetModified struct {
+	Handle Handle
+}
 
-const (
-	Added AssetEventKind = iota
-	Modified
-	Removed
-)
+type EventAssetRemoved struct {
+	Handle Handle
+}

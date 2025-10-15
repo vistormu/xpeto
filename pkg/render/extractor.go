@@ -1,21 +1,41 @@
 package render
 
-type Extractor struct {
-	extractors  map[Phase][]ExtractionFn
+import (
+	"github.com/vistormu/xpeto/core/ecs"
+)
+
+type extractionFn = func(*ecs.World) []Renderable
+
+type Phase int
+
+const (
+	Transparent Phase = iota
+	Opaque
+	UI
+	PostFx
+)
+
+type extractor struct {
+	extractors  map[Phase][]extractionFn
 	renderables map[Phase][]Renderable
 }
 
-func NewExtractor() *Extractor {
-	return &Extractor{
-		extractors:  make(map[Phase][]ExtractionFn),
+func newExtractor() *extractor {
+	return &extractor{
+		extractors:  make(map[Phase][]extractionFn),
 		renderables: make(map[Phase][]Renderable),
 	}
 }
 
-func (e *Extractor) AddExtractionFn(phase Phase, fn ExtractionFn) {
+// ===
+// API
+// ===
+func AddExtractionFn(w *ecs.World, phase Phase, fn extractionFn) {
+	e, _ := ecs.GetResource[extractor](w)
+
 	_, ok := e.extractors[phase]
 	if !ok {
-		e.extractors[phase] = []ExtractionFn{}
+		e.extractors[phase] = []extractionFn{}
 	}
 
 	e.extractors[phase] = append(e.extractors[phase], fn)

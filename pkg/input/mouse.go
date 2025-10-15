@@ -4,13 +4,27 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
-	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/event"
+	"github.com/vistormu/xpeto/core/ecs"
+	// "github.com/vistormu/xpeto/internal/event"
 )
 
-func updateMouseInput(ctx *core.Context) {
-	mouse := core.MustResource[*Mouse](ctx)
-	eb := core.MustResource[*event.Bus](ctx)
+type MouseButton = ebiten.MouseButton
+type Mouse struct {
+	Button *ButtonInput[MouseButton]
+	Cursor *CursorInput
+	Wheel  *WheelInput
+}
+
+func newMouse() *Mouse {
+	return &Mouse{
+		Button: newButtonInput[MouseButton](),
+		Cursor: &CursorInput{},
+		Wheel:  &WheelInput{},
+	}
+}
+
+func updateMouseInput(w *ecs.World) {
+	mouse, _ := ecs.GetResource[Mouse](w)
 
 	mouse.Button.clear()
 
@@ -28,19 +42,19 @@ func updateMouseInput(ctx *core.Context) {
 		// rising edges
 		if inpututil.IsMouseButtonJustPressed(btn) {
 			mouse.Button.press(btn)
-			event.Publish(eb, MouseButtonJustPressed{Button: btn})
+			// event.Publish(eb, MouseButtonJustPressed{Button: btn})
 		}
 
 		// falling edges
 		if inpututil.IsMouseButtonJustReleased(btn) {
 			mouse.Button.release(btn)
-			event.Publish(eb, MouseButtonJustReleased{Button: btn})
+			// event.Publish(eb, MouseButtonJustReleased{Button: btn})
 		}
 	}
 }
 
-func updateMouseCursor(ctx *core.Context) {
-	mouse := core.MustResource[*Mouse](ctx)
+func updateMouseCursor(w *ecs.World) {
+	mouse, _ := ecs.GetResource[Mouse](w)
 
 	x, y := ebiten.CursorPosition()
 
@@ -55,8 +69,8 @@ func updateMouseCursor(ctx *core.Context) {
 	mouse.Cursor.Dy = y - prevY
 }
 
-func updateMouseWheel(ctx *core.Context) {
-	mouse := core.MustResource[*Mouse](ctx)
+func updateMouseWheel(w *ecs.World) {
+	mouse, _ := ecs.GetResource[Mouse](w)
 
 	x, y := ebiten.Wheel()
 

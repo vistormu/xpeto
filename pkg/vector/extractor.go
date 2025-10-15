@@ -1,40 +1,35 @@
 package vector
 
 import (
-	"github.com/vistormu/xpeto/internal/core"
-	"github.com/vistormu/xpeto/internal/ecs"
+	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/pkg/transform"
 
 	"github.com/vistormu/xpeto/pkg/render"
-	"github.com/vistormu/xpeto/pkg/transform"
 )
 
 func packKey(layer, order uint16) uint64 {
 	return (uint64(layer) << 16) | uint64(order)
 }
 
-func extractCircles(ctx *core.Context) []render.Renderable {
-	w := core.MustResource[*ecs.World](ctx)
-	entities := w.Query(ecs.And(
-		ecs.Has[*Circle](),
-		ecs.Has[*transform.Transform](),
-	))
+func extractCircles(w *ecs.World) []render.Renderable {
+	q := ecs.NewQuery2[Circle, transform.Transform](w)
 
 	renderables := make([]render.Renderable, 0)
-	for _, e := range entities {
+	for _, b := range q.Iter() {
 		// components
-		transform, _ := ecs.GetComponent[*transform.Transform](w, e)
-		circle, _ := ecs.GetComponent[*Circle](w, e)
+		ci := b.A()
+		tr := b.B()
 
 		item := &circleItem{
-			radius:    circle.Radius,
-			fill:      circle.Fill,
-			stroke:    circle.Stroke,
-			linewidth: circle.Linewidth,
-			x:         transform.Position.X,
-			y:         transform.Position.Y,
-			layer:     circle.Layer,
-			order:     circle.Order,
-			key:       packKey(circle.Layer, circle.Order),
+			radius:    ci.Radius,
+			fill:      ci.Fill,
+			stroke:    ci.Stroke,
+			linewidth: ci.Linewidth,
+			x:         float32(tr.X),
+			y:         float32(tr.Y),
+			layer:     ci.Layer,
+			order:     ci.Order,
+			key:       packKey(ci.Layer, ci.Order),
 		}
 		renderables = append(renderables, item)
 	}
@@ -42,18 +37,14 @@ func extractCircles(ctx *core.Context) []render.Renderable {
 	return renderables
 }
 
-func extractRects(ctx *core.Context) []render.Renderable {
-	w := core.MustResource[*ecs.World](ctx)
-	entities := w.Query(ecs.And(
-		ecs.Has[*Rect](),
-		ecs.Has[*transform.Transform](),
-	))
+func extractRects(w *ecs.World) []render.Renderable {
+	q := ecs.NewQuery2[Rect, transform.Transform](w)
 
 	renderables := make([]render.Renderable, 0)
-	for _, e := range entities {
+	for _, b := range q.Iter() {
 		// components
-		transform, _ := ecs.GetComponent[*transform.Transform](w, e)
-		rect, _ := ecs.GetComponent[*Rect](w, e)
+		rect := b.A()
+		tr := b.B()
 
 		item := &rectItem{
 			width:     rect.Width,
@@ -61,8 +52,8 @@ func extractRects(ctx *core.Context) []render.Renderable {
 			fill:      rect.Fill,
 			stroke:    rect.Stroke,
 			linewidth: rect.Linewidth,
-			x:         transform.Position.X,
-			y:         transform.Position.Y,
+			x:         float32(tr.X),
+			y:         float32(tr.Y),
 			layer:     rect.Layer,
 			order:     rect.Order,
 			key:       packKey(rect.Layer, rect.Order),

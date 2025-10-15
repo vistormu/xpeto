@@ -4,18 +4,25 @@ import (
 	"sort"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/vistormu/xpeto/internal/core"
+
+	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/pkg/window"
 )
 
-func draw(ctx *core.Context) {
-	screen := core.MustResource[*ebiten.Image](ctx)
-	e := core.MustResource[*Extractor](ctx)
+type Renderable interface {
+	SortKey() uint64
+	Draw(screen *ebiten.Image)
+}
+
+func draw(w *ecs.World) {
+	screen, _ := ecs.GetResource[window.Screen](w)
+	e, _ := ecs.GetResource[extractor](w)
 
 	// extraction
 	for phase, fns := range e.extractors {
 		buf := e.renderables[phase][:0]
 		for _, fn := range fns {
-			buf = append(buf, fn(ctx)...)
+			buf = append(buf, fn(w)...)
 		}
 		e.renderables[phase] = buf
 	}

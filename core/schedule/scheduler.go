@@ -69,10 +69,79 @@ func (sch *Scheduler) run(w *ecs.World, stages []Stage) {
 	}
 }
 
+func (sch *Scheduler) sortAllStages() {
+	for st := range sch.schedules {
+		sch.sortStage(st)
+	}
+}
+
+func (sch *Scheduler) sortStage(stage Stage) {
+	list := sch.schedules[stage]
+	n := len(list)
+	if n <= 1 {
+		return
+	}
+
+	idToIdx := make(map[uint64]int, n)
+	for i, s := range list {
+		idToIdx[s.Id] = i
+	}
+
+	adj := make([][]int, n)
+	indeg := make([]int, n)
+
+	addEdge := func(u, v int) {
+		if u == v || u < 0 || v < 0 {
+			return
+		}
+		adj[u] = append(adj[u], v)
+		indeg[v]++
+	}
+
+	for i, s := range list {
+		for _, dep := range s.after {
+			if j, ok := idToIdx[dep]; ok {
+				addEdge(j, i)
+			}
+		}
+		for _, dep := range s.before {
+			if j, ok := idToIdx[dep]; ok {
+				addEdge(i, j)
+			}
+		}
+	}
+
+	queue := make([]int, 0, n)
+	for i := range n {
+		if indeg[i] == 0 {
+			queue = append(queue, i)
+		}
+	}
+
+	out := make([]*Schedule, 0, n)
+	for len(queue) > 0 {
+		v := queue[0]
+		queue = queue[1:]
+		out = append(out, list[v])
+
+		for _, w := range adj[v] {
+			indeg[w]--
+			if indeg[w] == 0 {
+				queue = append(queue, w)
+			}
+		}
+	}
+
+	if len(out) == n {
+		sch.schedules[stage] = out
+	}
+}
+
 // THIS METHOD SHOULD NOT BE CALLED
 //
 // it should only be called by the `xp.App` struct
 func (sch *Scheduler) RunStartup(w *ecs.World) {
+	sch.sortAllStages()
 	stages := []Stage{preStartup, startup, postStartup}
 	sch.run(w, stages)
 }
@@ -81,6 +150,8 @@ func (sch *Scheduler) RunStartup(w *ecs.World) {
 //
 // it should only be called by the `xp.App` struct
 func (sch *Scheduler) RunUpdate(w *ecs.World) {
+	sch.sortAllStages()
+
 	// first pass
 	stages := []Stage{
 		first,
@@ -122,6 +193,7 @@ func (sch *Scheduler) RunUpdate(w *ecs.World) {
 //
 // it should only be called by the `xp.App` struct
 func (sch *Scheduler) RunDraw(w *ecs.World) {
+	sch.sortAllStages()
 	stages := []Stage{preDraw, draw, postDraw}
 	sch.run(w, stages)
 }
@@ -130,6 +202,7 @@ func (sch *Scheduler) RunDraw(w *ecs.World) {
 //
 // it should only be called by the `xp.App` struct
 func (sch *Scheduler) RunExit(w *ecs.World) {
+	sch.sortAllStages()
 	sch.run(w, []Stage{exit})
 }
 
