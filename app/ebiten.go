@@ -1,5 +1,4 @@
 //go:build !headless
-// +build !headless
 
 package app
 
@@ -10,6 +9,10 @@ import (
 
 	"github.com/vistormu/xpeto/core/pkg/window"
 )
+
+var toRunner = map[Runner]runner{
+	Ebiten: &ebitenRunner{},
+}
 
 type ebitenRunner struct {
 	app *App

@@ -10,8 +10,3 @@ const (
 	Ebiten Runner = iota
 	Headless
 )
-
-var toRunner = map[Runner]runner{
-	Ebiten:   &ebitenRunner{},
-	Headless: &headlessRunner{},
-}

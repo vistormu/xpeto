@@ -1,6 +1,8 @@
 package app
 
 import (
+	"errors"
+
 	"github.com/vistormu/xpeto/core/ecs"
 	"github.com/vistormu/xpeto/core/schedule"
 
@@ -51,7 +53,11 @@ func (a *App) build() *App {
 
 func (a *App) Run() error {
 	defer a.scheduler.RunExit(a.world)
-	runner := toRunner[a.runner]
+	runner, ok := toRunner[a.runner]
+	if !ok {
+		return errors.New("runner not found")
+	}
+
 	err := runner.run(a)
 
 	return err

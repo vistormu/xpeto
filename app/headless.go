@@ -1,5 +1,4 @@
 //go:build headless
-// +build headless
 
 package app
 
@@ -11,6 +10,11 @@ import (
 	"github.com/vistormu/xpeto/core/ecs"
 	xptime "github.com/vistormu/xpeto/core/pkg/time"
 )
+
+var toRunner = map[Runner]runner{
+	Ebiten:   &headlessRunner{},
+	Headless: &headlessRunner{},
+}
 
 type headlessRunner struct {
 	app *App

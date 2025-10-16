@@ -1,6 +1,6 @@
 project_name := xpeto
 dist_dir := dist
-version := 0.0.3
+version := 0.0.4
 
 .PHONY: build upload install clean
 
