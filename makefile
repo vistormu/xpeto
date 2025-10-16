@@ -1,6 +1,6 @@
 project_name := xpeto
 dist_dir := dist
-version := 0.0.1
+version := 0.0.2
 
 .PHONY: build upload install clean
 
@@ -30,7 +30,7 @@ upload:
 	git tag -a v$(version) -m "release v$(version)"
 	git push origin main
 	git push origin --tags
-	gh release create v$(version) $(dist_dir)/* --title "release v$(version)" --notes "release v$(version)"
+	# gh release create v$(version) $(dist_dir)/* --title "release v$(version)" --notes "release v$(version)"
 
 install: build
 	sudo cp $(dist_dir)/$(project_name)_darwin_arm64 /usr/local/bin/$(project_name)

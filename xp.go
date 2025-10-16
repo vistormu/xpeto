@@ -225,6 +225,9 @@ var Draw = schedule.Draw
 // description
 var PostDraw = schedule.PostDraw
 
+// descriptopm
+var Exit = schedule.Exit
+
 // #############
 // CORE PACKAGES
 // #############
