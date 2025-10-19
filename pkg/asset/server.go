@@ -77,7 +77,7 @@ func storeAssetByType(s *Server, type_ reflect.Type, handle Handle, asset any) {
 // ===
 // API
 // ===
-func SetFileSystem(w *ecs.World, fsys fs.FS) {
+func AddFileSystem(w *ecs.World, fsys fs.FS) {
 	as, _ := ecs.GetResource[Server](w)
 	as.fsys = fsys
 }

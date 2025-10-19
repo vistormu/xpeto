@@ -54,6 +54,9 @@ var HasEntity = ecs.HasEntity
 // component
 // ---------
 
+// helper type for tagging entitites
+type Tag[T any] struct{}
+
 func AddComponent[T any](w *World, e Entity, c T) bool {
 	return ecs.AddComponent(w, e, c)
 }
@@ -333,13 +336,7 @@ type Transform = transform.Transform
 // ======
 
 // description
-type Layout = window.Layout
-
-// description
-type Screen = window.Screen
-
-// description
-type WindowSettings = window.WindowSettings
+type Window = window.Window
 
 // ###
 // APP
@@ -401,7 +398,7 @@ type Handle = asset.Handle
 // ------
 
 // description
-var SetFileSystem = asset.SetFileSystem
+var AddFileSystem = asset.AddFileSystem
 
 // description
 var AddAssetLoader = asset.AddAssetLoader

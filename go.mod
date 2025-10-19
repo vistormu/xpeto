@@ -3,7 +3,7 @@ module github.com/vistormu/xpeto
 go 1.25.2
 
 require (
-	github.com/hajimehoshi/ebiten/v2 v2.9.0
+	github.com/hajimehoshi/ebiten/v2 v2.9.2
 	github.com/vistormu/go-dsa v0.0.11
 )
 

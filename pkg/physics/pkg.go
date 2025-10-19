@@ -7,14 +7,24 @@ import (
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	// resources
-	ecs.AddResource(w, &Settings{})
+	ecs.AddResource(w, Space{
+		Cells:      make([]*Cell, 0),
+		candidates: make([]pair, 0),
+		Contacts:   make([]ContactPair, 0),
+	})
+	ecs.AddResource(w, lastSpaceSize{})
+	ecs.AddResource(w, Gravity{})
 
 	// systems
+	schedule.AddSystem(sch, schedule.FixedPreUpdate, resizeSpace)
+
 	schedule.AddSystem(sch, schedule.FixedUpdate, applyGravity)
 	schedule.AddSystem(sch, schedule.FixedUpdate, integrateVelocities)
 
-	cs := NewCollisionSolver()
-	schedule.AddSystem(sch, schedule.FixedUpdate, cs.buildBroadPhase)
-	schedule.AddSystem(sch, schedule.FixedUpdate, cs.narrowPhaseAABB)
-	schedule.AddSystem(sch, schedule.FixedUpdate, cs.resolveContactsAABB)
+	schedule.AddSystem(sch, schedule.FixedUpdate, fillGrid)
+	schedule.AddSystem(sch, schedule.FixedUpdate, getCandidates)
+
+	schedule.AddSystem(sch, schedule.FixedUpdate, narrowPhaseRectRect)
+	schedule.AddSystem(sch, schedule.FixedUpdate, resolveContacts)
+	schedule.AddSystem(sch, schedule.FixedUpdate, resolveContactsImpulses)
 }

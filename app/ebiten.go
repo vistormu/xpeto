@@ -30,8 +30,8 @@ func (r *ebitenRunner) Draw(screen *ebiten.Image) {
 }
 
 func (r *ebitenRunner) Layout(w, h int) (int, int) {
-	layout, _ := ecs.GetResource[window.Layout](r.app.world)
-	return layout.Width, layout.Height
+	win, _ := ecs.GetResource[window.Window](r.app.world)
+	return win.VWidth, win.VHeight
 }
 
 func (r *ebitenRunner) run(a *App) error {

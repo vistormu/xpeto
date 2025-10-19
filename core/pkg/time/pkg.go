@@ -19,7 +19,7 @@ func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	ecs.AddResource(w, RealClock{})
 	ecs.AddResource(w, VirtualClock{})
 	ecs.AddResource(w, FixedClock{
-		Timestep:    time.Second / 60,
+		Delta:       time.Second / 60,
 		Accumulator: 0,
 		MaxSteps:    8,
 	})

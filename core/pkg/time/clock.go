@@ -43,7 +43,7 @@ type VirtualClock struct {
 }
 
 type FixedClock struct {
-	Timestep    time.Duration
+	Delta       time.Duration
 	Accumulator time.Duration
 	Steps       int
 	MaxSteps    int
@@ -95,8 +95,8 @@ func tick(w *ecs.World) {
 	fixed.Accumulator += virtualDelta
 
 	steps := 0
-	for fixed.Timestep > 0 && fixed.Accumulator >= fixed.Timestep && steps < fixed.MaxSteps {
-		fixed.Accumulator -= fixed.Timestep
+	for fixed.Delta > 0 && fixed.Accumulator >= fixed.Delta && steps < fixed.MaxSteps {
+		fixed.Accumulator -= fixed.Delta
 		steps++
 	}
 
@@ -139,7 +139,7 @@ func applyChanges(w *ecs.World) {
 	if !s.SyncWithFps && s.FixedDelta != ls.FixedDelta {
 		if s.FixedDelta <= 0 {
 			ebiten.SetTPS(ebiten.DefaultTPS)
-			fixed.Timestep = time.Second / time.Duration(ebiten.DefaultTPS)
+			fixed.Delta = time.Second / time.Duration(ebiten.DefaultTPS)
 		} else {
 			hz := 1.0 / s.FixedDelta.Seconds()
 			tps := int(math.Round(hz))
@@ -149,7 +149,7 @@ func applyChanges(w *ecs.World) {
 				tps = 10_000
 			}
 			ebiten.SetTPS(tps)
-			fixed.Timestep = s.FixedDelta
+			fixed.Delta = s.FixedDelta
 		}
 
 		ls.FixedDelta = s.FixedDelta

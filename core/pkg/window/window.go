@@ -5,7 +5,7 @@ import (
 	"github.com/vistormu/xpeto/core/ecs"
 )
 
-type WindowSettings struct {
+type Window struct {
 	Title        string
 	Width        int
 	Height       int
@@ -15,23 +15,23 @@ type WindowSettings struct {
 	AntiAliasing bool
 }
 
-type lastSettings struct {
-	WindowSettings
+type lastWindow struct {
+	Window
 }
 
-func applyInitialSettings(w *ecs.World) {
-	ws, _ := ecs.GetResource[WindowSettings](w)
+func applyInitial(w *ecs.World) {
+	ws, _ := ecs.GetResource[Window](w)
 
 	ebiten.SetWindowSize(ws.Width, ws.Height)
 	ebiten.SetWindowTitle(ws.Title)
 	ebiten.SetFullscreen(ws.FullScreen)
 
-	ecs.AddResource(w, lastSettings{*ws})
+	ecs.AddResource(w, lastWindow{*ws})
 }
 
 func applyChanges(w *ecs.World) {
-	ws, _ := ecs.GetResource[WindowSettings](w)
-	applied, _ := ecs.GetResource[lastSettings](w)
+	ws, _ := ecs.GetResource[Window](w)
+	applied, _ := ecs.GetResource[lastWindow](w)
 
 	if ws.Width != applied.Width || ws.Height != applied.Height {
 		ebiten.SetWindowSize(ws.Width, ws.Height)

@@ -7,7 +7,7 @@ import (
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	// resources
-	ecs.AddResource(w, WindowSettings{
+	ecs.AddResource(w, Window{
 		Width:        1920,
 		Height:       1080,
 		VWidth:       192,
@@ -15,12 +15,8 @@ func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 		FullScreen:   false,
 		AntiAliasing: false,
 	})
-	ecs.AddResource(w, Layout{
-		Width:  192,
-		Height: 108,
-	})
 
 	// systems
-	schedule.AddSystem(sch, schedule.PreStartup, applyInitialSettings)
+	schedule.AddSystem(sch, schedule.PreStartup, applyInitial)
 	schedule.AddSystem(sch, schedule.PreUpdate, applyChanges)
 }
