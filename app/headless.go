@@ -29,14 +29,24 @@ func (r *headlessRunner) update() {
 	ticker := time.NewTicker(cs.FixedDelta)
 	defer ticker.Stop()
 
-loop:
 	for {
 		select {
 		case <-stopper.Listen():
-			break loop
+			return
 
 		case <-ticker.C:
 			r.app.scheduler.RunUpdate(r.app.world)
+
+			latest, _ := ecs.GetResource[xptime.ClockSettings](r.app.world)
+
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+
+			timer.Reset(latest.FixedDelta)
 		}
 	}
 }
