@@ -3,6 +3,8 @@
 package time
 
 import (
+	"time"
+
 	"github.com/vistormu/xpeto/core/ecs"
 )
 
