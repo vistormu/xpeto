@@ -39,14 +39,14 @@ func (r *headlessRunner) update() {
 
 			latest, _ := ecs.GetResource[xptime.ClockSettings](r.app.world)
 
-			if !timer.Stop() {
+			if !ticker.Stop() {
 				select {
-				case <-timer.C:
+				case <-ticker.C:
 				default:
 				}
 			}
 
-			timer.Reset(latest.FixedDelta)
+			ticker.Reset(latest.FixedDelta)
 		}
 	}
 }
