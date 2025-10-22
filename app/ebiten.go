@@ -7,6 +7,7 @@ import (
 
 	"github.com/vistormu/xpeto/core/ecs"
 
+	"github.com/vistormu/xpeto/core/pkg/event"
 	"github.com/vistormu/xpeto/core/pkg/window"
 )
 
@@ -20,6 +21,12 @@ type ebitenRunner struct {
 
 func (r *ebitenRunner) Update() error {
 	r.app.scheduler.RunUpdate(r.app.world)
+
+	_, ok := event.GetEvents[EventExit](r.app.world)
+	if ok {
+		return ebiten.Termination
+	}
+
 	return nil
 }
 

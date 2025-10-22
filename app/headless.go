@@ -57,7 +57,7 @@ func (r *headlessRunner) update() {
 			timer.Reset(latest.FixedDelta)
 
 			// exit event
-			_, ok := event.GetEvents[EventExit](w)
+			_, ok := event.GetEvents[EventExit](r.app.world)
 			if ok {
 				return
 			}
