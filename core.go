@@ -340,6 +340,9 @@ type Window = window.Window
 // description
 var NewApp = app.NewApp
 
+// description
+type EventExit = app.EventExit
+
 // =======
 // runners
 // =======

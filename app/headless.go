@@ -7,6 +7,7 @@ import (
 
 	"github.com/vistormu/go-dsa/system"
 	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/pkg/event"
 	xptime "github.com/vistormu/xpeto/core/pkg/time"
 )
 
@@ -43,6 +44,7 @@ func (r *headlessRunner) update() {
 		case <-timer.C:
 			r.app.scheduler.RunUpdate(r.app.world)
 
+			// dynamic tick
 			latest, _ := ecs.GetResource[xptime.ClockSettings](r.app.world)
 
 			if !timer.Stop() {
@@ -53,6 +55,12 @@ func (r *headlessRunner) update() {
 			}
 
 			timer.Reset(latest.FixedDelta)
+
+			// exit event
+			_, ok := event.GetEvents[EventExit](w)
+			if ok {
+				return
+			}
 		}
 	}
 }
