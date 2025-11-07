@@ -139,6 +139,10 @@ func (q *Query1[A]) Iter() func(func(i int, b bundle1[A]) bool) {
 	}
 }
 
+func (q *Query1[A]) Get() []bundle1[A] {
+	return collect(q.Iter())
+}
+
 func NewQuery1[A any](w *World, filters ...Filter) *Query1[A] {
 	return &Query1[A]{
 		storeA:  getStore[A](w.registry),
@@ -185,6 +189,10 @@ func (q *Query2[A, B]) Iter() func(func(i int, b bundle2[A, B]) bool) {
 			i++
 		}
 	}
+}
+
+func (q *Query2[A, B]) Get() []bundle2[A, B] {
+	return collect(q.Iter())
 }
 
 func NewQuery2[A, B any](w *World, filters ...Filter) *Query2[A, B] {
@@ -247,6 +255,10 @@ func (q *Query3[A, B, C]) Iter() func(func(i int, b bundle3[A, B, C]) bool) {
 			i++
 		}
 	}
+}
+
+func (q *Query3[A, B, C]) Get() []bundle3[A, B, C] {
+	return collect(q.Iter())
 }
 
 func NewQuery3[A, B, C any](w *World, filters ...Filter) *Query3[A, B, C] {
@@ -320,6 +332,10 @@ func (q *Query4[A, B, C, D]) Iter() func(func(i int, b bundle4[A, B, C, D]) bool
 	}
 }
 
+func (q *Query4[A, B, C, D]) Get() []bundle4[A, B, C, D] {
+	return collect(q.Iter())
+}
+
 func NewQuery4[A, B, C, D any](w *World, filters ...Filter) *Query4[A, B, C, D] {
 	a := getStore[A](w.registry)
 	b := getStore[B](w.registry)
@@ -340,4 +356,16 @@ func NewQuery4[A, B, C, D any](w *World, filters ...Filter) *Query4[A, B, C, D] 
 			func() []Entity { return d.dense },
 		),
 	}
+}
+
+// =======
+// helpers
+// =======
+func collect[T any](iter func(func(i int, t T) bool)) []T {
+	out := make([]T, 0)
+	iter(func(_ int, t T) bool {
+		out = append(out, t)
+		return true
+	})
+	return out
 }
