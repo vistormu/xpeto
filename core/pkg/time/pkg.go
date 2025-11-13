@@ -32,5 +32,5 @@ func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	// systems
 	schedule.AddSystem(sch, schedule.PreStartup, applyInitialSettings)
 	schedule.AddSystem(sch, schedule.PreUpdate, applyChanges)
-	schedule.AddSystem(sch, schedule.PreUpdate, tick)
+	schedule.AddSystem(sch, schedule.First, tick)
 }
