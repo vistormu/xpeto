@@ -90,7 +90,7 @@ func (sm *stateMachine[T]) run(w *ecs.World, ss []*schedule.Schedule) {
 		}
 
 		if execute {
-			ecs.SetSystemId(w, sch.Id)
+			ecs.SetSystemInfo(w, sch.Id, "")
 			sch.System(w)
 		}
 	}
@@ -127,7 +127,7 @@ func (sm *stateMachine[T]) update(w *ecs.World) {
 func AddStateMachine[T comparable](sch *schedule.Scheduler, initial T) {
 	sm := newStateMachine(initial)
 	schedule.AddExtra(sch, sm)
-	schedule.AddSystem(sch, schedule.PostStartup, sm.startup)
+	schedule.AddSystem(sch, schedule.PreStartup, sm.startup)
 	schedule.AddSystem(sch, schedule.StateTransition, sm.update)
 }
 

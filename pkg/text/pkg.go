@@ -7,5 +7,7 @@ import (
 )
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
-	render.AddExtractionFn(w, render.Opaque, extractTexts)
+	render.AddExtractionFn(w, extractText)
+	render.AddSortFn(w, sortText)
+	render.AddRenderFn(w, render.Ui, drawText)
 }

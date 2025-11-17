@@ -7,8 +7,5 @@ import (
 )
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
-	// loader
-	asset.AddAssetLoader(w, ".png", loadImage)
-	asset.AddAssetLoader(w, ".jpg", loadImage)
-	asset.AddAssetLoader(w, ".jpeg", loadImage)
+	asset.AddLoaderFn(w, loadImage, ".png", ".jpg", ".jpeg")
 }

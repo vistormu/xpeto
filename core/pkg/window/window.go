@@ -1,52 +1,61 @@
-//go:build !headless
-
 package window
 
 import (
-	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/vistormu/go-dsa/constraints"
+
 	"github.com/vistormu/xpeto/core/ecs"
 )
 
-type Window struct {
+// ====
+// real
+// ====
+type RealWindow struct {
 	Title        string
 	Width        int
 	Height       int
-	VWidth       int
-	VHeight      int
 	FullScreen   bool
 	AntiAliasing bool
 }
 
-type lastWindow struct {
-	Window
+type lastRealWindow struct {
+	RealWindow
 }
 
-func applyInitial(w *ecs.World) {
-	ws, _ := ecs.GetResource[Window](w)
-
-	ebiten.SetWindowSize(ws.Width, ws.Height)
-	ebiten.SetWindowTitle(ws.Title)
-	ebiten.SetFullscreen(ws.FullScreen)
-
-	ecs.AddResource(w, lastWindow{*ws})
+// =======
+// virtual
+// =======
+type VirtualWindow struct {
+	Width  int
+	Height int
 }
 
-func applyChanges(w *ecs.World) {
-	ws, _ := ecs.GetResource[Window](w)
-	applied, _ := ecs.GetResource[lastWindow](w)
+// ===
+// API
+// ===
+func SetRealWindowSize(w *ecs.World, width, height int) {
+	rw, _ := ecs.GetResource[RealWindow](w)
+	rw.Width = width
+	rw.Height = height
+}
 
-	if ws.Width != applied.Width || ws.Height != applied.Height {
-		ebiten.SetWindowSize(ws.Width, ws.Height)
-		applied.Width, applied.Height = ws.Width, ws.Height
-	}
+func GetRealWindowSize[T constraints.Number](w *ecs.World) (width, height T) {
+	rw, _ := ecs.GetResource[RealWindow](w)
+	width = T(rw.Width)
+	height = T(rw.Height)
 
-	if ws.Title != applied.Title {
-		ebiten.SetWindowTitle(ws.Title)
-		applied.Title = ws.Title
-	}
+	return
+}
 
-	if ws.FullScreen != applied.FullScreen {
-		ebiten.SetFullscreen(ws.FullScreen)
-		applied.FullScreen = ws.FullScreen
-	}
+func SetVirtualWindowSize(w *ecs.World, width, height int) {
+	rw, _ := ecs.GetResource[VirtualWindow](w)
+	rw.Width = width
+	rw.Height = height
+}
+
+func GetVirtualWindowSize[T constraints.Number](w *ecs.World) (width, height T) {
+	rw, _ := ecs.GetResource[VirtualWindow](w)
+	width = T(rw.Width)
+	height = T(rw.Height)
+
+	return
 }

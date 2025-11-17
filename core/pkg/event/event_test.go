@@ -13,7 +13,7 @@ func TestFirstReadReturnsAllSoFar(t *testing.T) {
 	w := ecs.NewWorld()
 	ecs.AddResource(w, newBus())
 
-	ecs.SetSystemId(w, 1)
+	ecs.SetSystemInfo(w, 1, "bus")
 
 	AddEvent(w, evA{1})
 	AddEvent(w, evA{2})
@@ -39,7 +39,7 @@ func TestDoubleBufferingAcrossUpdate(t *testing.T) {
 	w := ecs.NewWorld()
 	ecs.AddResource(w, newBus())
 
-	ecs.SetSystemId(w, 1)
+	ecs.SetSystemInfo(w, 1, "bus")
 
 	AddEvent(w, evA{10})
 	update(w)
@@ -64,27 +64,27 @@ func TestPerSystemIsolation(t *testing.T) {
 	w := ecs.NewWorld()
 	ecs.AddResource(w, newBus())
 
-	ecs.SetSystemId(w, 1)
+	ecs.SetSystemInfo(w, 1, "bus")
 	AddEvent(w, evA{1})
 	got1, _ := GetEvents[evA](w)
 	if len(got1) != 1 || got1[0].v != 1 {
 		t.Fatalf("sys1 wrong first read: %#v", got1)
 	}
 
-	ecs.SetSystemId(w, 2)
+	ecs.SetSystemInfo(w, 2, "")
 	got2, _ := GetEvents[evA](w)
 	if len(got2) != 1 || got2[0].v != 1 {
 		t.Fatalf("sys2 should independently see event: %#v", got2)
 	}
 
-	ecs.SetSystemId(w, 1)
+	ecs.SetSystemInfo(w, 1, "")
 	AddEvent(w, evA{2})
 	got1, _ = GetEvents[evA](w)
 	if len(got1) != 1 || got1[0].v != 2 {
 		t.Fatalf("sys1 should see only new event: %#v", got1)
 	}
 
-	ecs.SetSystemId(w, 2)
+	ecs.SetSystemInfo(w, 2, "")
 	got2, _ = GetEvents[evA](w)
 	if len(got2) != 1 || got2[0].v != 2 {
 		t.Fatalf("sys2 should now see the second event: %#v", got2)
@@ -94,7 +94,7 @@ func TestPerSystemIsolation(t *testing.T) {
 func TestPerTypeIsolationSameSystem(t *testing.T) {
 	w := ecs.NewWorld()
 	ecs.AddResource(w, newBus())
-	ecs.SetSystemId(w, 1)
+	ecs.SetSystemInfo(w, 1, "")
 
 	AddEvent(w, evA{7})
 	AddEvent(w, evB{"x"})

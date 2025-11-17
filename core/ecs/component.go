@@ -93,3 +93,10 @@ func removeComponents(r *hashmap.TypeMap, e Entity) bool {
 
 	return removed
 }
+
+// =================
+// helper components
+// =================
+type Name struct {
+	Value string
+}

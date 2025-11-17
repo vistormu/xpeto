@@ -1,6 +1,6 @@
 package physics
 
-import "github.com/vistormu/xpeto/core/pkg/transform"
+import "github.com/vistormu/xpeto/pkg/transform"
 
 // ======
 // circle

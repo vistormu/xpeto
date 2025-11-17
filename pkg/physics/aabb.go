@@ -7,7 +7,7 @@ import (
 	"github.com/vistormu/go-dsa/set"
 
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg/transform"
+	"github.com/vistormu/xpeto/pkg/transform"
 )
 
 type AABB struct {
@@ -85,8 +85,7 @@ func fillGrid(w *ecs.World) {
 	q := ecs.NewQuery2[Collider, transform.Transform](w)
 
 	for _, b := range q.Iter() {
-		col := b.A()
-		tr := b.B()
+		col, tr := b.Components()
 
 		i0, j0, i1, j1 := aabbToCellSpan(s, col.Shape.AABB(tr))
 		if i1 < i0 || j1 < j0 {

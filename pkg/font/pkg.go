@@ -7,6 +7,5 @@ import (
 )
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
-	// loader
-	asset.AddAssetLoader(w, ".ttf", loadFont)
+	asset.AddLoaderFn(w, loadFont, ".ttf")
 }

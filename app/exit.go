@@ -1,3 +1,3 @@
 package app
 
-type EventExit struct{}
+type ExitApp struct{}

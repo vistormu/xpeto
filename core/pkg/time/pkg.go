@@ -30,7 +30,7 @@ func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	})
 
 	// systems
-	schedule.AddSystem(sch, schedule.PreStartup, applyInitialSettings)
-	schedule.AddSystem(sch, schedule.PreUpdate, applyChanges)
-	schedule.AddSystem(sch, schedule.First, tick)
+	schedule.AddSystem(sch, schedule.PreStartup, applyInitialSettings).Label("time.applyInitialSettings")
+	schedule.AddSystem(sch, schedule.First, applyChanges).Label("time.applyChanges")
+	schedule.AddSystem(sch, schedule.First, tick).Label("time.tick")
 }

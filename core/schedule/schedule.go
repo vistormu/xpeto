@@ -4,6 +4,7 @@ import "github.com/vistormu/xpeto/core/ecs"
 
 type Schedule struct {
 	Id         uint64
+	Label      string
 	stage      Stage
 	System     ecs.System
 	before     []uint64

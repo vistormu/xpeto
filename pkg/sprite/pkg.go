@@ -8,5 +8,7 @@ import (
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	// extraction
-	render.AddExtractionFn(w, render.Opaque, extractSprites)
+	render.AddExtractionFn(w, extractSprite)
+	render.AddSortFn(w, sortSprite)
+	render.AddRenderFn(w, render.Opaque, drawSprite)
 }

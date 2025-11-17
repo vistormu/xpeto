@@ -10,5 +10,5 @@ func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	ecs.AddResource(w, newBus())
 
 	// systems
-	schedule.AddSystem(sch, schedule.Last, update)
+	schedule.AddSystem(sch, schedule.Last, update).Label("event.update")
 }

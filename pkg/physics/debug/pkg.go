@@ -11,8 +11,11 @@ func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	ecs.AddResource(w, defaultSettings())
 
 	// extractor
-	render.AddExtractionFn(w, render.Opaque, extractAabb)
-	render.AddExtractionFn(w, render.Opaque, extractVelocities)
-	render.AddExtractionFn(w, render.Opaque, extractContacts)
-	render.AddExtractionFn(w, render.Opaque, extractGrid)
+	render.AddExtractionFn(w, extractAabb)
+	render.AddSortFn(w, sortAabb)
+	render.AddRenderFn(w, render.Ui, drawAabb)
+
+	// render.AddExtractionFn(w, render.Opaque, extractVelocities)
+	// render.AddExtractionFn(w, render.Opaque, extractContacts)
+	// render.AddExtractionFn(w, render.Opaque, extractGrid)
 }

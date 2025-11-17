@@ -5,40 +5,136 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"github.com/vistormu/go-dsa/hashmap"
 	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/pkg/log"
 )
 
-type Renderable interface {
-	SortKey() uint64
-	Draw(screen *ebiten.Image)
+// =====
+// types
+// =====
+type ExtractionFn[T any] = func(*ecs.World) []T
+type SortFn[T any] = func(v T) uint64
+type RenderFn[T any] = func(screen *ebiten.Image, v T)
+
+type renderable struct {
+	key  uint64
+	draw func(*ebiten.Image)
 }
 
+type renderFn func(r *renderer, w *ecs.World)
+
+// ========
+// renderer
+// ========
+type renderer struct {
+	extractionFns *hashmap.TypeMap
+	sortFns       *hashmap.TypeMap
+	renderFns     map[RenderStage][]renderFn
+	renderables   []renderable
+}
+
+func newRenderer() renderer {
+	return renderer{
+		extractionFns: hashmap.NewTypeMap(),
+		sortFns:       hashmap.NewTypeMap(),
+		renderFns:     make(map[RenderStage][]renderFn),
+		renderables:   make([]renderable, 0),
+	}
+}
+
+// =======
+// systems
+// =======
 func draw(w *ecs.World) {
 	screen, _ := ecs.GetResource[ebiten.Image](w)
-	e, _ := ecs.GetResource[extractor](w)
+	r, _ := ecs.GetResource[renderer](w)
 
-	// extraction
-	for phase, fns := range e.extractors {
-		buf := e.renderables[phase][:0]
+	for _, stage := range stagesOrder {
+		fns, ok := r.renderFns[stage]
+		if !ok || len(fns) == 0 {
+			continue
+		}
+
+		r.renderables = r.renderables[:0]
+
 		for _, fn := range fns {
-			buf = append(buf, fn(w)...)
+			fn(r, w)
 		}
-		e.renderables[phase] = buf
-	}
 
-	// sort
-	for phase := range e.renderables {
-		items := e.renderables[phase]
-		sort.SliceStable(items, func(i, j int) bool {
-			return items[i].SortKey() < items[j].SortKey()
+		sort.SliceStable(r.renderables, func(i, j int) bool {
+			return r.renderables[i].key < r.renderables[j].key
 		})
-	}
 
-	// render
-	// TODO: phase order
-	for phase := range e.renderables {
-		for _, r := range e.renderables[phase] {
-			r.Draw(screen)
+		for _, re := range r.renderables {
+			re.draw(screen)
 		}
 	}
+}
+
+// ===
+// API
+// ===
+func AddExtractionFn[T any](w *ecs.World, fn ExtractionFn[T]) {
+	r, ok := ecs.GetResource[renderer](w)
+	if !ok {
+		log.LogError(w, "could not execute AddExtractionFn: render.Pkg not added")
+		return
+	}
+
+	hashmap.Add(r.extractionFns, fn)
+}
+
+func AddSortFn[T any](w *ecs.World, fn SortFn[T]) {
+	r, ok := ecs.GetResource[renderer](w)
+	if !ok {
+		log.LogError(w, "could not execute AddSortFn: render.Pkg not added")
+		return
+	}
+
+	hashmap.Add(r.sortFns, fn)
+}
+
+func AddRenderFn[T any](w *ecs.World, stage RenderStage, fn RenderFn[T]) {
+	r, ok := ecs.GetResource[renderer](w)
+	if !ok {
+		log.LogError(w, "cannot execute AddRenderFn: render.Pkg not included")
+		return
+	}
+
+	_, ok = r.renderFns[stage]
+	if !ok {
+		r.renderFns[stage] = make([]renderFn, 0)
+	}
+
+	exFn, ok := hashmap.Get[ExtractionFn[T]](r.extractionFns)
+	if !ok {
+		log.LogError(w, "AddExtractionFn should be executed before AddRenderFn")
+		return
+	}
+
+	sortFn, ok := hashmap.Get[SortFn[T]](r.sortFns)
+	if !ok {
+		log.LogError(w, "AddSortFn should be executed before AddRenderFn")
+		return
+	}
+
+	r.renderFns[stage] = append(r.renderFns[stage], func(r *renderer, w *ecs.World) {
+		renderables := (*exFn)(w)
+		if len(renderables) == 0 {
+			return
+		}
+
+		for _, re := range renderables {
+			reCopy := re
+			key := (*sortFn)(reCopy)
+
+			r.renderables = append(r.renderables, renderable{
+				key: key,
+				draw: func(screen *ebiten.Image) {
+					fn(screen, reCopy)
+				},
+			})
+		}
+	})
 }

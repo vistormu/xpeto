@@ -1,8 +1,6 @@
 package app
 
 import (
-	"errors"
-
 	"github.com/vistormu/xpeto/core/ecs"
 	"github.com/vistormu/xpeto/core/schedule"
 
@@ -12,7 +10,7 @@ import (
 type App struct {
 	world     *ecs.World
 	scheduler *schedule.Scheduler
-	runner    Runner
+	runner    runner
 	pkgs      []pkg.Pkg
 }
 
@@ -24,21 +22,14 @@ func NewApp() *App {
 	}
 }
 
-func (a *App) WithPkgs(pkgs ...pkg.Pkg) *App {
-	a.pkgs = append(a.pkgs, pkgs...)
-	return a
-}
-
-func (a *App) WithRunner(runner Runner) *App {
-	a.runner = runner
+func (a *App) AddPkg(pkg pkg.Pkg) *App {
+	a.pkgs = append(a.pkgs, pkg)
 	return a
 }
 
 func (a *App) build() *App {
 	// core packages
-	for _, pkg := range pkg.CorePkgs() {
-		pkg(a.world, a.scheduler)
-	}
+	pkg.CorePkgs(a.world, a.scheduler)
 
 	// user packages
 	for _, pkg := range a.pkgs {
@@ -53,12 +44,8 @@ func (a *App) build() *App {
 
 func (a *App) Run() error {
 	defer a.scheduler.RunExit(a.world)
-	runner, ok := toRunner[a.runner]
-	if !ok {
-		return errors.New("runner not found")
-	}
 
-	err := runner.run(a)
+	err := a.runner.run(a)
 
 	return err
 }

@@ -1,8 +1,10 @@
 package ecs
 
 import (
+	"fmt"
 	"reflect"
 
+	"github.com/vistormu/go-dsa/ansi"
 	"github.com/vistormu/go-dsa/hashmap"
 )
 
@@ -19,7 +21,7 @@ func NewWorld() *World {
 		resources:  hashmap.NewTypeMap(),
 	}
 
-	AddResource(w, &systemId{})
+	AddResource(w, systemInfo{})
 
 	return w
 }
@@ -51,6 +53,11 @@ func HasEntity(w *World, e Entity) bool {
 func AddComponent[T any](w *World, e Entity, c T) bool {
 	ok := w.population.has(e)
 	if !ok {
+		return false
+	}
+
+	if reflect.TypeFor[T]().Kind() == reflect.Pointer {
+		fmt.Printf("%s%scomponents should be added by value and not by reference%s\n", ansi.Bold, ansi.BgRed, ansi.Reset)
 		return false
 	}
 

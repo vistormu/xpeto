@@ -2,85 +2,149 @@ package asset
 
 import (
 	"fmt"
-	"io"
-	"log"
-	"reflect"
+	"io/fs"
+	"sync"
 
+	"github.com/vistormu/go-dsa/queue"
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg/event"
+	"github.com/vistormu/xpeto/core/pkg/log"
 )
 
-type LoadState uint8
+// =====
+// types
+// =====
+type LoaderFn[T any] = func([]byte, string) (*T, error)
 
-const (
-	NotFound LoadState = iota
-	Loading
-	Loaded
-	Failed
-)
+type loaderHandler = func(*server, request, []byte) error
 
-type loaderFn = func(reader io.Reader) (any, error)
-
-type loadRequest struct {
-	path       string
-	bundle     any
-	bundleType reflect.Type
-	handle     Handle
-	assetType  reflect.Type
-	loaderFn   loaderFn
+type request struct {
+	path  string
+	asset Asset
 }
 
-func update(w *ecs.World) {
-	as, _ := ecs.GetResource[Server](w)
+type result struct {
+	req  request
+	data []byte
+	err  error
+}
 
-	for !as.pending.IsEmpty() {
-		req, _ := as.pending.Dequeue()
+// ======
+// loader
+// ======
+type loader struct {
+	mu       sync.Mutex
+	requests *queue.QueueArray[request]
+	pending  []result
+}
 
-		// immediately add the asset to the context
-		ecs.AddResourceByType(w, req.bundle, req.bundleType)
+func newLoader() loader {
+	return loader{
+		requests: queue.NewQueueArray[request](),
+		pending:  make([]result, 0),
+	}
+}
 
-		// load asset asynchronously
-		go func(r loadRequest) {
-			defer func() {
-				if rec := recover(); rec != nil {
-					as.completed <- loadResult{r, nil,
-						fmt.Errorf("loader panic: %v", rec)}
-				}
-			}()
+func (l *loader) enqueue(req request) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
-			file, err := as.fsys.Open(r.path)
-			if err != nil {
-				as.completed <- loadResult{r, nil, err}
-				return
-			}
+	l.requests.Enqueue(req)
+}
 
-			content, err := r.loaderFn(file)
-			as.completed <- loadResult{r, content, err}
-		}(req)
+func (l *loader) drainRequests() []request {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	out := make([]request, 0, l.requests.Length())
+	for !l.requests.IsEmpty() {
+		req, _ := l.requests.Dequeue()
+		out = append(out, req)
 	}
 
-	// handle completed load results
-	for {
-		select {
-		case res := <-as.completed:
-			if res.err != nil {
-				as.loadStates[res.req.path] = Failed
-				as.registered.RemoveByKey(res.req.path)
-				log.Printf("asset with path %s could not be loaded", res.req.path)
+	return out
+}
 
-				return
-			}
+func (l *loader) addResult(res result) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
-			// add the asset to the store
-			storeAssetByType(as, res.req.assetType, res.req.handle, res.content)
+	l.pending = append(l.pending, res)
+}
 
-			// notify the state of the new asset
-			event.AddEvent(w, EventAssetAdded{
-				Handle: res.req.handle,
+func (l *loader) drainResults() []result {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	out := l.pending
+	l.pending = nil
+
+	return out
+}
+
+// =======
+// helpers
+// =======
+func readFile(s *server, req request) ([]byte, error) {
+	base, rel, _ := splitPath(req.path)
+
+	fsys, ok := s.staticFS[base]
+	if !ok {
+		return nil, fmt.Errorf("could not find the filesystem for base %s. this error shouldn't have hapenned", base)
+	}
+
+	data, err := fs.ReadFile(fsys, rel)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read asset %q (%s:%s): %w", req.path, base, rel, err)
+	}
+
+	return data, nil
+}
+
+// =======
+// systems
+// =======
+func readRequests(w *ecs.World) {
+	s, _ := ecs.GetResource[server](w)
+	l, _ := ecs.GetResource[loader](w)
+
+	for _, req := range l.drainRequests() {
+		go func(r request) {
+			data, err := readFile(s, req)
+			l.addResult(result{
+				req:  req,
+				data: data,
+				err:  err,
 			})
+		}(req)
+	}
+}
 
-		default:
-			return
+func loadResults(w *ecs.World) {
+	s, _ := ecs.GetResource[server](w)
+	l, _ := ecs.GetResource[loader](w)
+
+	for _, res := range l.drainResults() {
+		if res.err != nil {
+			log.LogError(w, "failed loading asset",
+				log.F("path", res.req.path),
+				log.F("error", res.err.Error()),
+			)
+			continue
+		}
+
+		_, _, ext := splitPath(res.req.path)
+		fn, ok := s.loaders[ext]
+		if !ok {
+			log.LogError(w, "loader not found for extension. this error shouldn't have happened", log.F("ext", ext))
+			continue
+		}
+
+		err := fn(s, res.req, res.data)
+		if err != nil {
+			log.LogError(w, "the asset loader returned an error",
+				log.F("path", res.req.path),
+				log.F("error", err.Error()),
+			)
 		}
 	}
 }

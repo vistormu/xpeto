@@ -12,5 +12,5 @@ func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	ecs.AddResource(w, l)
 
 	// systems
-	schedule.AddSystem(sch, schedule.Last, flush)
+	schedule.AddSystem(sch, schedule.Last, flush).Label("log.flush")
 }

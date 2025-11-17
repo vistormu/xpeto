@@ -22,8 +22,7 @@ func applyGravity(w *ecs.World) {
 	q := ecs.NewQuery2[Velocity, RigidBody](w)
 
 	for _, b := range q.Iter() {
-		v := b.A()
-		rb := b.B()
+		v, rb := b.Components()
 
 		if rb.Type != Dynamic {
 			continue

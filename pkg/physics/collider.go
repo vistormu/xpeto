@@ -1,7 +1,7 @@
 package physics
 
 import (
-	"github.com/vistormu/xpeto/core/pkg/transform"
+	"github.com/vistormu/xpeto/pkg/transform"
 )
 
 // =====

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<a href="https://github.com/vistormu/xpeto" target="_blank" title="go to the repo"><img width="196px" alt="xpeto logo" src="/docs/logo.png"></a>
+<a href="https://github.com/vistormu/xpeto" target="_blank" title="go to the repo"><img width="196px" alt="xpeto logo" src="/assets/image.png"></a>
 
 # xpeto<br>an ECS 2D game engine in Go for small games
 

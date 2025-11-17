@@ -30,87 +30,20 @@ func Or(filters ...Filter) Filter {
 	}
 }
 
-// =======
-// bundles
-// =======
+// =
+// 1
+// =
+
+// bundle
 type bundle1[A any] struct {
 	e Entity
 	a *A
 }
 
 func (b bundle1[A]) Entity() Entity { return b.e }
-func (b bundle1[A]) A() *A          { return b.a }
+func (b bundle1[A]) Components() *A { return b.a }
 
-type bundle2[A, B any] struct {
-	e  Entity
-	a  *A
-	bb *B
-}
-
-func (b bundle2[A, B]) Entity() Entity { return b.e }
-func (b bundle2[A, B]) A() *A          { return b.a }
-func (b bundle2[A, B]) B() *B          { return b.bb }
-
-type bundle3[A, B, C any] struct {
-	e  Entity
-	a  *A
-	bb *B
-	c  *C
-}
-
-func (b bundle3[A, B, C]) Entity() Entity { return b.e }
-func (b bundle3[A, B, C]) A() *A          { return b.a }
-func (b bundle3[A, B, C]) B() *B          { return b.bb }
-func (b bundle3[A, B, C]) C() *C          { return b.c }
-
-type bundle4[A, B, C, D any] struct {
-	e  Entity
-	a  *A
-	bb *B
-	c  *C
-	d  *D
-}
-
-func (b bundle4[A, B, C, D]) Entity() Entity { return b.e }
-func (b bundle4[A, B, C, D]) A() *A          { return b.a }
-func (b bundle4[A, B, C, D]) B() *B          { return b.bb }
-func (b bundle4[A, B, C, D]) C() *C          { return b.c }
-func (b bundle4[A, B, C, D]) D() *D          { return b.d }
-
-// =======
-// helpers
-// =======
-type denseProvider func() []Entity
-
-func pickSmallestDense(providers ...denseProvider) denseProvider {
-	if len(providers) == 0 {
-		return func() []Entity { return nil }
-	}
-	best := providers[0]
-	bestLen := len(best())
-	for i := 1; i < len(providers); i++ {
-		cur := providers[i]
-		if l := len(cur()); l < bestLen {
-			best, bestLen = cur, l
-		}
-	}
-	return best
-}
-
-func passFilters(w *World, e Entity, filters []Filter) bool {
-	for _, flt := range filters {
-		if !flt(w, e) {
-			return false
-		}
-	}
-	return true
-}
-
-// =====
 // query
-// =====
-
-// 1
 type Query1[A any] struct {
 	storeA  *store[A]
 	filters []Filter
@@ -139,8 +72,16 @@ func (q *Query1[A]) Iter() func(func(i int, b bundle1[A]) bool) {
 	}
 }
 
-func (q *Query1[A]) Get() []bundle1[A] {
+func (q *Query1[A]) Bundles() []bundle1[A] {
 	return collect(q.Iter())
+}
+
+func (q *Query1[A]) First() (bundle1[A], bool) {
+	return first(q.Iter())
+}
+
+func (q *Query1[A]) Single() (bundle1[A], bool) {
+	return single(q.Iter())
 }
 
 func NewQuery1[A any](w *World, filters ...Filter) *Query1[A] {
@@ -151,7 +92,21 @@ func NewQuery1[A any](w *World, filters ...Filter) *Query1[A] {
 	}
 }
 
+// =
 // 2
+// =
+
+// bundle
+type bundle2[A, B any] struct {
+	e  Entity
+	a  *A
+	bb *B
+}
+
+func (b bundle2[A, B]) Entity() Entity       { return b.e }
+func (b bundle2[A, B]) Components() (*A, *B) { return b.a, b.bb }
+
+// query
 type Query2[A, B any] struct {
 	storeA  *store[A]
 	storeB  *store[B]
@@ -191,8 +146,16 @@ func (q *Query2[A, B]) Iter() func(func(i int, b bundle2[A, B]) bool) {
 	}
 }
 
-func (q *Query2[A, B]) Get() []bundle2[A, B] {
+func (q *Query2[A, B]) Bundles() []bundle2[A, B] {
 	return collect(q.Iter())
+}
+
+func (q *Query2[A, B]) First() (bundle2[A, B], bool) {
+	return first(q.Iter())
+}
+
+func (q *Query2[A, B]) Single() (bundle2[A, B], bool) {
+	return single(q.Iter())
 }
 
 func NewQuery2[A, B any](w *World, filters ...Filter) *Query2[A, B] {
@@ -211,7 +174,22 @@ func NewQuery2[A, B any](w *World, filters ...Filter) *Query2[A, B] {
 	}
 }
 
+// =
 // 3
+// =
+
+// bundle
+type bundle3[A, B, C any] struct {
+	e  Entity
+	a  *A
+	bb *B
+	c  *C
+}
+
+func (b bundle3[A, B, C]) Entity() Entity           { return b.e }
+func (b bundle3[A, B, C]) Components() (*A, *B, *C) { return b.a, b.bb, b.c }
+
+// query
 type Query3[A, B, C any] struct {
 	storeA  *store[A]
 	storeB  *store[B]
@@ -257,8 +235,16 @@ func (q *Query3[A, B, C]) Iter() func(func(i int, b bundle3[A, B, C]) bool) {
 	}
 }
 
-func (q *Query3[A, B, C]) Get() []bundle3[A, B, C] {
+func (q *Query3[A, B, C]) Bundles() []bundle3[A, B, C] {
 	return collect(q.Iter())
+}
+
+func (q *Query3[A, B, C]) First() (bundle3[A, B, C], bool) {
+	return first(q.Iter())
+}
+
+func (q *Query3[A, B, C]) Single() (bundle3[A, B, C], bool) {
+	return single(q.Iter())
 }
 
 func NewQuery3[A, B, C any](w *World, filters ...Filter) *Query3[A, B, C] {
@@ -280,7 +266,23 @@ func NewQuery3[A, B, C any](w *World, filters ...Filter) *Query3[A, B, C] {
 	}
 }
 
+// =
 // 4
+// =
+
+// bundle
+type bundle4[A, B, C, D any] struct {
+	e  Entity
+	a  *A
+	bb *B
+	c  *C
+	d  *D
+}
+
+func (b bundle4[A, B, C, D]) Entity() Entity               { return b.e }
+func (b bundle4[A, B, C, D]) Components() (*A, *B, *C, *D) { return b.a, b.bb, b.c, b.d }
+
+// query
 type Query4[A, B, C, D any] struct {
 	storeA  *store[A]
 	storeB  *store[B]
@@ -332,8 +334,16 @@ func (q *Query4[A, B, C, D]) Iter() func(func(i int, b bundle4[A, B, C, D]) bool
 	}
 }
 
-func (q *Query4[A, B, C, D]) Get() []bundle4[A, B, C, D] {
+func (q *Query4[A, B, C, D]) Bundles() []bundle4[A, B, C, D] {
 	return collect(q.Iter())
+}
+
+func (q *Query4[A, B, C, D]) First() (bundle4[A, B, C, D], bool) {
+	return first(q.Iter())
+}
+
+func (q *Query4[A, B, C, D]) Single() (bundle4[A, B, C, D], bool) {
+	return single(q.Iter())
 }
 
 func NewQuery4[A, B, C, D any](w *World, filters ...Filter) *Query4[A, B, C, D] {
@@ -361,6 +371,32 @@ func NewQuery4[A, B, C, D any](w *World, filters ...Filter) *Query4[A, B, C, D] 
 // =======
 // helpers
 // =======
+type denseProvider func() []Entity
+
+func pickSmallestDense(providers ...denseProvider) denseProvider {
+	if len(providers) == 0 {
+		return func() []Entity { return nil }
+	}
+	best := providers[0]
+	bestLen := len(best())
+	for i := 1; i < len(providers); i++ {
+		cur := providers[i]
+		if l := len(cur()); l < bestLen {
+			best, bestLen = cur, l
+		}
+	}
+	return best
+}
+
+func passFilters(w *World, e Entity, filters []Filter) bool {
+	for _, flt := range filters {
+		if !flt(w, e) {
+			return false
+		}
+	}
+	return true
+}
+
 func collect[T any](iter func(func(i int, t T) bool)) []T {
 	out := make([]T, 0)
 	iter(func(_ int, t T) bool {
@@ -368,4 +404,36 @@ func collect[T any](iter func(func(i int, t T) bool)) []T {
 		return true
 	})
 	return out
+}
+
+func first[T any](iter func(func(_ int, t T) bool)) (T, bool) {
+	var out T
+	var found bool
+	iter(func(_ int, t T) bool {
+		out = t
+		found = true
+		return false
+	})
+	return out, found
+}
+
+func single[T any](iter func(func(_ int, t T) bool)) (T, bool) {
+	var out T
+	var count int
+	iter(func(_ int, t T) bool {
+		if count == 1 {
+			count++
+			return false
+		}
+		out = t
+		count++
+		return true
+	})
+
+	if count != 1 {
+		var zero T
+		return zero, false
+	}
+
+	return out, true
 }

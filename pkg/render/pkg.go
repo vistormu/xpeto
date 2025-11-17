@@ -7,8 +7,8 @@ import (
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	// resources
-	ecs.AddResource(w, newExtractor())
+	ecs.AddResource(w, newRenderer())
 
 	// system
-	schedule.AddSystem(sch, schedule.Draw, draw)
+	schedule.AddSystem(sch, schedule.Draw, draw).Label("render.draw")
 }

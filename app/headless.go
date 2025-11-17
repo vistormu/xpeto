@@ -11,23 +11,21 @@ import (
 	xptime "github.com/vistormu/xpeto/core/pkg/time"
 )
 
-var toRunner = map[Runner]runner{
-	Ebiten:   &headlessRunner{},
-	Headless: &headlessRunner{},
-}
-
-type headlessRunner struct {
+type runner struct {
 	app *App
 }
 
-func (r *headlessRunner) run(a *App) error {
+func (r *runner) run(a *App) error {
 	a.build()
+
 	r.app = a
+
 	r.update()
+
 	return nil
 }
 
-func (r *headlessRunner) update() {
+func (r *runner) update() {
 	stopper := system.NewKbIntListener()
 	defer stopper.Stop()
 
@@ -57,7 +55,7 @@ func (r *headlessRunner) update() {
 			timer.Reset(latest.FixedDelta)
 
 			// exit event
-			_, ok := event.GetEvents[EventExit](r.app.world)
+			_, ok := event.GetEvents[ExitApp](r.app.world)
 			if ok {
 				return
 			}

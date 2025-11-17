@@ -2,233 +2,235 @@ package asset
 
 import (
 	"io/fs"
-	"log"
 	"path/filepath"
 	"reflect"
-	"sync"
+	"strings"
 
 	"github.com/vistormu/go-dsa/hashmap"
-	"github.com/vistormu/go-dsa/queue"
 
 	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/pkg/log"
 )
 
-type loadResult struct {
-	req     loadRequest
-	content any
-	err     error
+// ======
+// server
+// ======
+type server struct {
+	population *population
+	store      *hashmap.TypeMap
+
+	staticFS map[string]fs.FS
+	loaders  map[string]loaderHandler
 }
 
-type Server struct {
-	mu   sync.RWMutex
-	fsys fs.FS
-
-	nextId      int
-	freeHandles *queue.QueueArray[Handle]
-
-	registered *hashmap.BiHashmap[string, Handle]
-	loadStates map[string]LoadState
-
-	pending   *queue.QueueArray[loadRequest]
-	completed chan loadResult
-
-	loaders    map[string]loaderFn
-	assetStore map[reflect.Type]map[Handle]any
-}
-
-func NewServer() *Server {
-	return &Server{
-		mu:          sync.RWMutex{},
-		fsys:        nil,
-		nextId:      1,
-		freeHandles: queue.NewQueueArray[Handle](),
-		registered:  hashmap.NewBiHashmap[string, Handle](),
-		loadStates:  make(map[string]LoadState),
-		pending:     queue.NewQueueArray[loadRequest](),
-		completed:   make(chan loadResult, 16),
-		loaders:     make(map[string]loaderFn),
-		assetStore:  make(map[reflect.Type]map[Handle]any),
+func newServer() server {
+	return server{
+		population: newPopulation(),
+		store:      hashmap.NewTypeMap(),
+		staticFS:   make(map[string]fs.FS),
+		loaders:    make(map[string]loaderHandler),
 	}
 }
 
-func storeAssetByType(s *Server, type_ reflect.Type, handle Handle, asset any) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	// check if the asset store exists for the type
-	assets, ok := s.assetStore[type_]
-	if !ok {
-		assets = make(map[Handle]any)
-		s.assetStore[type_] = assets
+// =======
+// helpers
+// =======
+func baseType(t reflect.Type) reflect.Type {
+	if t == nil {
+		return nil
 	}
+	if t.Kind() == reflect.Pointer {
+		return t.Elem()
+	}
+	return t
+}
 
-	// store the asset with the handle
-	assets[handle] = asset
+func splitPath(path string) (base string, rel string, ext string) {
+	clean := filepath.ToSlash(filepath.Clean(path))
 
-	// update the load state to loaded
-	path, ok := s.registered.GetByValue(handle)
-	if !ok {
-		log.Printf("handle %v not found in registered assets", handle)
+	ext = strings.ToLower(filepath.Ext(clean))
+
+	parts := strings.SplitN(clean, "/", 2)
+	if len(parts) != 2 {
+		base = ""
+		rel = clean
 		return
 	}
-	s.loadStates[path] = Loaded
+
+	base = parts[0]
+	rel = parts[1]
+
+	return
 }
 
 // ===
 // API
 // ===
-func AddFileSystem(w *ecs.World, fsys fs.FS) {
-	as, _ := ecs.GetResource[Server](w)
-	as.fsys = fsys
-}
-
-func AddAssetLoader(w *ecs.World, extension string, loader loaderFn) {
-	as, _ := ecs.GetResource[Server](w)
-
-	as.mu.Lock()
-	defer as.mu.Unlock()
-
-	_, ok := as.loaders[extension]
-	if ok {
+func AddStaticFS(w *ecs.World, base string, fsys fs.FS) {
+	s, ok := ecs.GetResource[server](w)
+	if !ok {
+		log.LogError(w, "cannot execute AddStaticFS: asset.Pkg not included")
 		return
 	}
 
-	as.loaders[extension] = loader
+	base = strings.TrimSpace(base)
+	if base == "" {
+		log.LogError(w, "cannot register filesystem: base is empty")
+		return
+	}
+
+	if strings.Contains(base, "\\") || strings.Contains(base, "/") {
+		log.LogError(w, "cannot register filesystem with base name containing path separators", log.F("base", base))
+		return
+	}
+
+	_, ok = s.staticFS[base]
+	if ok {
+		log.LogWarning(w, "base name for filesystem already exists, overwriting it", log.F("name", base))
+	}
+
+	s.staticFS[base] = fsys
 }
 
-func AddAssets[T any, B any](w *ecs.World) {
-	as, _ := ecs.GetResource[Server](w)
+func AddLoaderFn[T any](w *ecs.World, fn LoaderFn[T], extensions ...string) {
+	s, ok := ecs.GetResource[server](w)
+	if !ok {
+		log.LogError(w, "cannot execute AddLoaderFn: asset.Pkg not included")
+		return
+	}
 
-	bundle := new(B)
-	bundleValue := reflect.ValueOf(bundle).Elem()
-	bundleType := reflect.TypeFor[B]()
-	assetType := reflect.TypeFor[T]()
+	if len(extensions) == 0 {
+		log.LogError(w, "AddLoaderFn called without extensions")
+		return
+	}
 
-	for i := 0; i < bundleValue.NumField(); i++ {
-		// get path from tag
-		path := bundleType.Field(i).Tag.Get("path")
-		if path == "" {
-			panic("missing path tag for field " + bundleType.Field(i).Name)
+	for _, ext := range extensions {
+		ext = strings.ToLower(ext)
+		if ext == "" {
+			log.LogWarning(w, "empty extension provided in AddLoaderFn")
+			continue
+		}
+		if ext[0] != '.' {
+			ext = "." + ext
 		}
 
-		// check if the path is already registered
-		_, ok := as.registered.GetByKey(path)
+		_, ok := s.loaders[ext]
 		if ok {
+			log.LogWarning(w, "overwritting loader for extension", log.F("ext", ext))
+		}
+
+		s.loaders[ext] = func(s *server, req request, data []byte) error {
+			v, err := fn(data, req.path)
+			if err != nil {
+				return err
+			}
+
+			getStore[T](s.store).add(req.asset, v)
+
+			return nil
+		}
+	}
+}
+
+func AddAsset[T any](w *ecs.World) {
+	s, ok := ecs.GetResource[server](w)
+	if !ok {
+		log.LogError(w, "cannot execute AddAsset: asset.Pkg not included")
+		return
+	}
+	l, _ := ecs.GetResource[loader](w)
+
+	// types
+	b := new(T)
+	bType := baseType(reflect.TypeFor[T]())
+	bValue := reflect.ValueOf(b).Elem()
+
+	if bType.Kind() != reflect.Struct {
+		log.LogError(w, "the asset bundle must be a struct", log.F("got", bType.Kind().String()))
+	}
+
+	// iterate over the bundle
+	for i := range bValue.NumField() {
+		// get path from tag
+		path := bType.Field(i).Tag.Get("path")
+		if path == "" {
+			log.LogError(w, "missing path tag for field", log.F("name", bType.Field(i).Name))
 			continue
 		}
 
-		// get a free id or create a new one
-		var handle Handle
-		handle, err := as.freeHandles.Dequeue()
-		if err == nil {
-			handle = Handle{
-				Number:  handle.Number,
-				Version: handle.Version + 1,
-			}
-		} else {
-			handle = Handle{
-				Number:  as.nextId,
-				Version: 1,
-			}
-			as.nextId++
-		}
-
-		// set the bundleValue of the handle
-		field := bundleValue.Field(i)
-		if field.CanSet() && field.Type() == reflect.TypeOf(Handle{}) {
-			field.Set(reflect.ValueOf(handle))
-		} else {
-			log.Printf("field %s must be of type Handle and settable", bundleType.Field(i).Name)
-			continue
-		}
-
-		// register the path with the handle
-		as.registered.Put(path, handle)
-
-		// set new load state
-		as.loadStates[path] = Loading
-
-		// create the load context and put it in the pending queue
-		loader, ok := as.loaders[filepath.Ext(path)]
+		base, _, ext := splitPath(path)
+		_, ok := s.staticFS[base]
 		if !ok {
-			log.Println("loader not found")
+			log.LogError(w, "missing filesystem for asset", log.F("base", base))
 			continue
 		}
-		as.pending.Enqueue(loadRequest{
-			path:       path,
-			bundle:     *bundle,
-			bundleType: bundleType,
-			handle:     handle,
-			assetType:  assetType,
-			loaderFn:   loader,
+
+		if ext == "" {
+			log.LogError(w, "missing extension on path for asset", log.F("path", path))
+			continue
+		}
+
+		_, ok = s.loaders[ext]
+		if !ok {
+			log.LogError(w, "missing loader for asset type", log.F("ext", ext))
+			continue
+		}
+
+		// check field type
+		field := bValue.Field(i)
+		if !field.CanSet() {
+			log.LogError(w, "field must be settable", log.F("field", bType.Field(i).Name))
+			continue
+		}
+
+		if field.Type() != reflect.TypeFor[Asset]() {
+			log.LogError(w, "field must be of type Asset", log.F("got", field.Type().String()))
+			continue
+		}
+
+		// add asset
+		a := s.population.add()
+		field.Set(reflect.ValueOf(a))
+
+		// add request
+		l.enqueue(request{
+			path:  path,
+			asset: a,
 		})
 	}
+
+	// add bundle to the resources
+	ecs.AddResource(w, b)
 }
 
-func GetAsset[T any](w *ecs.World, handle Handle) (T, bool) {
-	as, _ := ecs.GetResource[Server](w)
-
-	as.mu.RLock()
-	defer as.mu.RUnlock()
-
-	assetType := reflect.TypeFor[T]()
-
-	assets, ok := as.assetStore[assetType]
+func GetAsset[T any](w *ecs.World, a Asset) (*T, bool) {
+	s, ok := ecs.GetResource[server](w)
 	if !ok {
-		var zero T
-		return zero, false
+		log.LogError(w, "cannot execute GetAsset: asset.Pkg not included")
+		return nil, false
 	}
 
-	asset, ok := assets[handle]
-	if !ok {
-		var zero T
-		return zero, false
+	if a == Asset(0) {
+		log.LogWarning(w, "cannot get asset with an initialized Asset type")
+		return nil, false
 	}
 
-	out, ok := asset.(T)
-	if !ok {
-		var zero T
-		return zero, false
-	}
-
-	return out, true
+	return getStore[T](s.store).get(a)
 }
 
-// func StoreAsset[T any](s *Server, handle Handle, asset T) {
-// 	s.mu.Lock()
-// 	defer s.mu.Unlock()
+func RemoveAsset[T any](w *ecs.World, a Asset) bool {
+	s, ok := ecs.GetResource[server](w)
+	if !ok {
+		log.LogError(w, "cannot execute RemoveAsset: asset.Pkg not included")
+		return false
+	}
 
-// 	assetType := reflect.TypeFor[T]()
+	if a == Asset(0) {
+		log.LogWarning(w, "cannot remove asset with an initialized Asset type")
+		return false
+	}
 
-// 	// check if the asset store exists for the type
-// 	assets, ok := s.assetStore[assetType]
-// 	if !ok {
-// 		assets = make(map[Handle]any)
-// 		s.assetStore[assetType] = assets
-// 	}
+	s.population.remove(a)
 
-// 	// store the asset with the handle
-// 	assets[handle] = asset
-
-// 	// update the load state to loaded
-// 	path, ok := s.registered.GetByValue(handle)
-// 	if !ok {
-// 		log.Printf("handle %v not found in registered assets", handle)
-// 		return
-// 	}
-// 	s.loadStates[path] = Loaded
-// }
-
-// func (s *Server) GetState(handle Handle) LoadState {
-// 	path, ok := s.registered.GetByValue(handle)
-// 	if !ok {
-// 		return NotFound
-// 	}
-
-// 	state, ok := s.loadStates[path]
-// 	if !ok {
-// 		return NotFound
-// 	}
-
-// 	return state
-// }
+	return getStore[T](s.store).remove(a)
+}

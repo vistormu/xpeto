@@ -1,15 +1,16 @@
 package xp
 
 import (
+	"github.com/vistormu/go-dsa/constraints"
 	"github.com/vistormu/xpeto/app"
 
 	"github.com/vistormu/xpeto/core/ecs"
 	"github.com/vistormu/xpeto/core/schedule"
 
 	"github.com/vistormu/xpeto/core/pkg/event"
+	"github.com/vistormu/xpeto/core/pkg/log"
 	"github.com/vistormu/xpeto/core/pkg/state"
 	"github.com/vistormu/xpeto/core/pkg/time"
-	"github.com/vistormu/xpeto/core/pkg/transform"
 	"github.com/vistormu/xpeto/core/pkg/window"
 )
 
@@ -45,17 +46,17 @@ var HasEntity = ecs.HasEntity
 // component
 // ---------
 
-// helper type for tagging entitites
-type Tag[T any] struct{}
-
+// description
 func AddComponent[T any](w *World, e Entity, c T) bool {
 	return ecs.AddComponent(w, e, c)
 }
 
+// description
 func GetComponent[T any](w *World, e Entity) (*T, bool) {
 	return ecs.GetComponent[T](w, e)
 }
 
+// description
 func RemoveComponent[T any](w *World, e Entity) bool {
 	return ecs.RemoveComponent[T](w, e)
 }
@@ -240,6 +241,33 @@ func GetEvents[T any](w *World) ([]T, bool) {
 	return event.GetEvents[T](w)
 }
 
+// ===
+// log
+// ===
+type LogLevel = log.Level
+
+const (
+	Debug   = log.Debug
+	Info    = log.Info
+	Warning = log.Warning
+	Error   = log.Error
+	Fatal   = log.Fatal
+)
+
+var SetLogLevel = log.SetLogLevel
+
+var LogDebug = log.LogDebug
+
+var LogInfo = log.LogInfo
+
+var LogWarning = log.LogWarning
+
+var LogError = log.LogError
+
+var LogFatal = log.LogFatal
+
+var F = log.F
+
 // =====
 // state
 // =====
@@ -315,19 +343,31 @@ type FixedClock = time.FixedClock
 // condition
 // ---------
 
-// =========
-// transform
-// =========
-
-// description
-type Transform = transform.Transform
-
 // ======
 // window
 // ======
 
 // description
-type Window = window.Window
+type RealWindow = window.RealWindow
+
+// description
+type VirtualWindow = window.VirtualWindow
+
+// description
+var SetRealWindowSize = window.SetRealWindowSize
+
+// description
+var SetVirtualWindowSize = window.SetVirtualWindowSize
+
+// description
+func GetRealWindowSize[T constraints.Number](w *World) (width, height T) {
+	return window.GetRealWindowSize[T](w)
+}
+
+// description
+func GetVirtualWindowSize[T constraints.Number](w *World) (width, height T) {
+	return window.GetVirtualWindowSize[T](w)
+}
 
 // ###
 // APP
@@ -341,14 +381,4 @@ type Window = window.Window
 var NewApp = app.NewApp
 
 // description
-type EventExit = app.EventExit
-
-// =======
-// runners
-// =======
-
-// description
-const Ebiten = app.Ebiten
-
-// description
-const Headless = app.Headless
+type ExitApp = app.ExitApp

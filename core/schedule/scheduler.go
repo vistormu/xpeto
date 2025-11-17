@@ -62,7 +62,7 @@ func (sch *Scheduler) run(w *ecs.World, stages []Stage) {
 			}
 
 			if execute {
-				ecs.SetSystemId(w, sch.Id)
+				ecs.SetSystemInfo(w, sch.Id, sch.Label)
 				sch.System(w)
 			}
 		}
@@ -241,6 +241,7 @@ func (sch *Scheduler) Label(label string) *Scheduler {
 		return sch
 	}
 
+	sch.lastSchedule.Label = label
 	sch.labelToId[label] = sch.lastSchedule.Id
 
 	return sch

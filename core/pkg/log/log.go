@@ -29,14 +29,16 @@ func log(w *ecs.World, level Level, msg string, fields []field) {
 	vClk, _ := ecs.GetResource[time.VirtualClock](w)
 
 	id := ecs.GetSystemId(w)
+	label := ecs.GetSystemLabel(w)
 
 	r := record{
-		level:    level,
-		systemId: id,
-		frame:    vClk.Frame,
-		time:     rClk.Elapsed,
-		message:  msg,
-		fields:   fields,
+		level:       level,
+		systemId:    id,
+		systemLabel: label,
+		frame:       vClk.Frame,
+		time:        rClk.Elapsed,
+		message:     msg,
+		fields:      fields,
 	}
 
 	l.records = append(l.records, r)

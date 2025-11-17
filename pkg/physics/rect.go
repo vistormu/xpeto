@@ -3,7 +3,7 @@ package physics
 import (
 	"math"
 
-	"github.com/vistormu/xpeto/core/pkg/transform"
+	"github.com/vistormu/xpeto/pkg/transform"
 )
 
 type Rect struct {

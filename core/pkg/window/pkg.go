@@ -1,5 +1,3 @@
-//go:build !headless
-
 package window
 
 import (
@@ -9,16 +7,17 @@ import (
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	// resources
-	ecs.AddResource(w, Window{
+	ecs.AddResource(w, RealWindow{
 		Width:        1920,
 		Height:       1080,
-		VWidth:       192,
-		VHeight:      108,
 		FullScreen:   false,
 		AntiAliasing: false,
 	})
+	ecs.AddResource(w, VirtualWindow{
+		Width:  192,
+		Height: 108,
+	})
 
 	// systems
-	schedule.AddSystem(sch, schedule.PreStartup, applyInitial)
-	schedule.AddSystem(sch, schedule.PreUpdate, applyChanges)
+	setSystems(sch)
 }

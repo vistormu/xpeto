@@ -4,7 +4,7 @@ import (
 	"math"
 
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg/transform"
+	"github.com/vistormu/xpeto/pkg/transform"
 )
 
 // =========

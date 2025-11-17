@@ -11,18 +11,14 @@ import (
 	"github.com/vistormu/xpeto/core/pkg/window"
 )
 
-var toRunner = map[Runner]runner{
-	Ebiten: &ebitenRunner{},
-}
-
-type ebitenRunner struct {
+type runner struct {
 	app *App
 }
 
-func (r *ebitenRunner) Update() error {
+func (r *runner) Update() error {
 	r.app.scheduler.RunUpdate(r.app.world)
 
-	_, ok := event.GetEvents[EventExit](r.app.world)
+	_, ok := event.GetEvents[ExitApp](r.app.world)
 	if ok {
 		return ebiten.Termination
 	}
@@ -30,18 +26,18 @@ func (r *ebitenRunner) Update() error {
 	return nil
 }
 
-func (r *ebitenRunner) Draw(screen *ebiten.Image) {
+func (r *runner) Draw(screen *ebiten.Image) {
 	ecs.AddResource(r.app.world, screen)
 	r.app.scheduler.RunDraw(r.app.world)
 	ecs.RemoveResource[ebiten.Image](r.app.world)
 }
 
-func (r *ebitenRunner) Layout(w, h int) (int, int) {
-	win, _ := ecs.GetResource[window.Window](r.app.world)
-	return win.VWidth, win.VHeight
+func (r *runner) Layout(w, h int) (int, int) {
+	win, _ := ecs.GetResource[window.VirtualWindow](r.app.world)
+	return win.Width, win.Height
 }
 
-func (r *ebitenRunner) run(a *App) error {
+func (r *runner) run(a *App) error {
 	a.build()
 
 	r.app = a

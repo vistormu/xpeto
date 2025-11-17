@@ -27,7 +27,7 @@ func (s *debugSink) write(frame uint64, records []record) {
 			ansi.Reset,
 		)
 
-		msg += fmt.Sprintf("   |> system: %d\n", r.systemId)
+		msg += fmt.Sprintf("   |> system: %s (id: %d)\n", r.systemLabel, r.systemId)
 		msg += fmt.Sprintf("   |> time:   %s\n", r.time.String())
 
 		for _, f := range r.fields {
