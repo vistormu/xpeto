@@ -12,6 +12,11 @@ func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	render.AddSortFn(w, sortEllipse)
 	render.AddRenderFn(w, render.Opaque, drawEllipse)
 
+	// path
+	render.AddExtractionFn(w, extractPath)
+	render.AddSortFn(w, sortPath)
+	render.AddRenderFn(w, render.Opaque, drawPath)
+
 	// rect
 	render.AddExtractionFn(w, extractRect)
 	render.AddSortFn(w, sortRect)

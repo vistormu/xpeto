@@ -49,7 +49,14 @@ func moveBall(w *xp.World) {
 	v.X = rand.NormFloat64()*1 + (c.MaxBallSpeed+c.MinBallSpeed)/2
 }
 
+func ballTrail(w *xp.World) {
+	b, _ := xp.Query2[xp.Transform, xp.PathShape](w, xp.With[Ball]()).Single()
+	r, p := b.Components()
+	p.Path.AddPoint(float32(r.X), float32(r.Y))
+}
+
 func movementMiniPkg(_ *xp.World, sch *xp.Scheduler) {
 	xp.AddSystem(sch, xp.OnEnter(statePlaying), moveBall)
+	xp.AddSystem(sch, xp.Update, ballTrail).RunIf(xp.InState(statePlaying))
 	xp.AddSystem(sch, xp.FixedUpdate, movePaddles).RunIf(xp.InState(statePlaying))
 }

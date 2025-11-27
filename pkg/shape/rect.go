@@ -11,66 +11,87 @@ import (
 	"github.com/vistormu/xpeto/pkg/transform"
 )
 
+// =========
+// component
+// =========
+type Rect struct {
+	geometry.Rect[float32]
+	Shape
+}
+
+func NewRect(w, h float32) Rect {
+	return Rect{
+		Rect:  geometry.NewRect(w, h),
+		Shape: newShape(),
+	}
+}
+
+func (r Rect) AddFillSolid(c color.Color) Rect {
+	r.Shape = r.Shape.AddFillSolid(c)
+	return r
+}
+
+func (r Rect) AddStroke(c color.Color, w float32) Rect {
+	r.Shape = r.Shape.AddStroke(c, w)
+	return r
+}
+
+func (r Rect) AddOrder(l, o uint16) Rect {
+	r.Shape = r.Shape.AddOrder(l, o)
+	return r
+}
+
+// ==========
+// renderable
+// ==========
 type rect struct {
-	width     float32
-	height    float32
-	fill      color.Color
-	stroke    color.Color
-	linewidth float32
-	x, y      float32
-	layer     uint16
-	order     uint16
+	Rect
+	transform.Transform
 }
 
 func extractRect(w *ecs.World) []rect {
-	q := ecs.NewQuery2[Shape, transform.Transform](w)
+	q := ecs.NewQuery2[Rect, transform.Transform](w)
 
 	out := make([]rect, 0)
 
 	for _, b := range q.Iter() {
-		s, t := b.Components()
+		r, t := b.Components()
 
-		if s.Shape.Kind != geometry.GeometryRect {
-			continue
-		}
-
-		out = append(out, rect{
-			width:     s.Shape.Rect.Width,
-			height:    s.Shape.Rect.Height,
-			fill:      s.Fill.Color,
-			stroke:    s.Stroke.Fill.Color,
-			linewidth: s.Stroke.Width,
-			x:         float32(t.X),
-			y:         float32(t.Y),
-			layer:     s.Layer,
-			order:     s.Order,
-		})
+		out = append(out, rect{*r, *t})
 	}
 
 	return out
 }
 
 func sortRect(r rect) uint64 {
-	return (uint64(r.layer) << 16) | uint64(r.order)
+	return (uint64(r.Layer) << 16) | uint64(r.Order)
 }
 
 func drawRect(screen *ebiten.Image, r rect) {
-	if r.width <= 0 || r.height <= 0 {
+	if r.Width <= 0 || r.Height <= 0 {
 		return
 	}
 
-	x := r.x - r.width*0.5
-	y := r.y - r.height*0.5
+	x := float32(r.X) - r.Width*0.5
+	y := float32(r.Y) - r.Height*0.5
 
-	if r.fill != nil {
-		vector.FillRect(screen, x, y, r.width, r.height, r.fill, false)
+	// fill
+	for _, f := range r.Fill {
+		if !f.Visible {
+			continue
+		}
+		vector.FillRect(screen, x, y, r.Width, r.Height, f.Color, false)
 	}
-	if r.stroke != nil && r.linewidth > 0 {
-		// optional crisp offset for odd stroke widths
-		if int(r.linewidth)%2 == 1 {
+
+	// stroke
+	for _, s := range r.Stroke {
+		if !s.Visible || s.Width <= 0 {
+			continue
+		}
+		if int(s.Width)%2 == 1 {
 			x += 0.5
 			y += 0.5
 		}
-		vector.StrokeRect(screen, x, y, r.width, r.height, r.linewidth, r.stroke, false)
+		vector.StrokeRect(screen, x, y, r.Width, r.Height, s.Width, s.Color, false)
 	}
 }

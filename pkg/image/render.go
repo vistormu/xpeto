@@ -1,16 +1,15 @@
-package sprite
+package image
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/vistormu/xpeto/core/ecs"
 	"github.com/vistormu/xpeto/pkg/asset"
-	"github.com/vistormu/xpeto/pkg/image"
 	"github.com/vistormu/xpeto/pkg/transform"
 )
 
 type sprite struct {
-	img   *image.Image
+	img   *Image
 	x, y  float64
 	flipX bool
 	flipY bool
@@ -27,7 +26,7 @@ func extractSprite(w *ecs.World) []sprite {
 	for _, b := range q.Iter() {
 		s, tr := b.Components()
 
-		img, ok := asset.GetAsset[image.Image](w, s.Image)
+		img, ok := asset.GetAsset[Image](w, s.Image)
 		if !ok || img == nil {
 			continue
 		}

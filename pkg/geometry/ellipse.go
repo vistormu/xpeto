@@ -9,34 +9,18 @@ type Ellipse[T c.Number] struct {
 	RadiusY T
 }
 
-func (s Ellipse[T]) Bounds() Rect[T] {
-	return Rect[T]{}
+func NewEllipse[T c.Number](rx, ry T) Ellipse[T] {
+	return Ellipse[T]{rx, ry}
 }
 
-func NewEllipse[T c.Number](rx, ry T) Geometry[T] {
-	return Geometry[T]{
-		Kind:    GeometryEllipse,
-		Ellipse: Ellipse[T]{rx, ry},
-	}
+func NewEllipseHW[T c.Number](h, w T) Ellipse[T] {
+	return Ellipse[T]{w / 2, h / 2}
 }
 
-func NewEllipseHW[T c.Number](h, w T) Geometry[T] {
-	return Geometry[T]{
-		Kind:    GeometryEllipse,
-		Ellipse: Ellipse[T]{w / 2, h / 2},
-	}
+func NewCircle[T c.Number](r T) Ellipse[T] {
+	return Ellipse[T]{r, r}
 }
 
-func NewCircle[T c.Number](r T) Geometry[T] {
-	return Geometry[T]{
-		Kind:    GeometryEllipse,
-		Ellipse: Ellipse[T]{r, r},
-	}
-}
-
-func NewCircleD[T c.Number](d T) Geometry[T] {
-	return Geometry[T]{
-		Kind:    GeometryEllipse,
-		Ellipse: Ellipse[T]{d / 2, d / 2},
-	}
+func NewCircleD[T c.Number](d T) Ellipse[T] {
+	return Ellipse[T]{d / 2, d / 2}
 }

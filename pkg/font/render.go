@@ -1,4 +1,4 @@
-package text
+package font
 
 import (
 	"image/color"
@@ -8,7 +8,6 @@ import (
 
 	"github.com/vistormu/xpeto/core/ecs"
 	"github.com/vistormu/xpeto/pkg/asset"
-	"github.com/vistormu/xpeto/pkg/font"
 	"github.com/vistormu/xpeto/pkg/transform"
 )
 
@@ -30,13 +29,13 @@ func extractText(w *ecs.World) []text {
 		txt, tr := b.Components()
 
 		// load asset
-		fnt, ok := asset.GetAsset[font.Font](w, txt.Font)
+		fnt, ok := asset.GetAsset[Font](w, txt.Font)
 		if !ok || fnt == nil {
 			continue
 		}
 
 		texts = append(texts, text{
-			face:    &ebitext.GoTextFace{Source: fnt.Face, Size: txt.Size},
+			face:    &ebitext.GoTextFace{Source: fnt.face, Size: txt.Size},
 			content: txt.Content,
 			align:   txt.Align,
 			color:   txt.Color,

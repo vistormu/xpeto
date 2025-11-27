@@ -1,24 +1,37 @@
 package font
 
 import (
-	"bytes"
+	"image/color"
 
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	ebitext "github.com/hajimehoshi/ebiten/v2/text/v2"
+
+	"github.com/vistormu/xpeto/pkg/asset"
 )
 
+// ====
+// font
+// ====
 type Font struct {
-	Face *text.GoTextFaceSource
+	face *ebitext.GoTextFaceSource
 }
 
-func loadFont(data []byte, path string) (*Font, error) {
-	face, err := text.NewGoTextFaceSource(bytes.NewReader(data))
-	if err != nil {
-		return nil, err
-	}
+// ====
+// text
+// ====
+type Align = ebitext.Align
 
-	font := &Font{
-		Face: face,
-	}
+const (
+	AlignStart  Align = ebitext.AlignStart
+	AlignCenter Align = ebitext.AlignCenter
+	AlignEnd    Align = ebitext.AlignEnd
+)
 
-	return font, nil
+type Text struct {
+	Font    asset.Asset
+	Content string
+	Align   Align
+	Color   color.Color
+	Size    float64
+	Layer   uint16
+	Order   uint16
 }

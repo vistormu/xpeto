@@ -9,20 +9,10 @@ type Rect[T c.Number] struct {
 	Height T
 }
 
-func (s Rect[T]) Bounds() Rect[T] {
-	return s
+func NewRect[T c.Number](w, h T) Rect[T] {
+	return Rect[T]{w, h}
 }
 
-func NewRect[T c.Number](w, h T) Geometry[T] {
-	return Geometry[T]{
-		Kind: GeometryRect,
-		Rect: Rect[T]{w, h},
-	}
-}
-
-func NewSquare[T c.Number](r T) Geometry[T] {
-	return Geometry[T]{
-		Kind: GeometryRect,
-		Rect: Rect[T]{r, r},
-	}
+func NewSquare[T c.Number](r T) Rect[T] {
+	return Rect[T]{r, r}
 }

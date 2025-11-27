@@ -3,18 +3,13 @@
 package xp
 
 import (
-	c "github.com/vistormu/go-dsa/constraints"
-
 	"github.com/vistormu/xpeto/pkg"
 
 	"github.com/vistormu/xpeto/pkg/asset"
 	"github.com/vistormu/xpeto/pkg/font"
-	"github.com/vistormu/xpeto/pkg/geometry"
 	"github.com/vistormu/xpeto/pkg/image"
 	"github.com/vistormu/xpeto/pkg/input"
 	"github.com/vistormu/xpeto/pkg/shape"
-	"github.com/vistormu/xpeto/pkg/sprite"
-	"github.com/vistormu/xpeto/pkg/text"
 	"github.com/vistormu/xpeto/pkg/transform"
 )
 
@@ -79,35 +74,17 @@ func RemoveAsset[T any](w *World, a Asset) bool {
 // description
 type Font = font.Font
 
+const (
+	AlignStart  = font.AlignStart
+	AlignCenter = font.AlignCenter
+	AlignEnd    = font.AlignEnd
+)
+
+type Text = font.Text
+
 // ========
 // geometry
 // ========
-
-// description
-type Geometry[T c.Number] = geometry.Geometry[T]
-
-// -------
-// ellipse
-// -------
-
-// description
-type Ellipse[T c.Number] = geometry.Ellipse[T]
-
-// description
-func NewCircle[T c.Number](r T) Geometry[T] {
-	return geometry.NewCircle(r)
-}
-
-// ----
-// rect
-// ----
-
-// description
-func NewRect[T c.Number](w, h T) Geometry[T] {
-	return geometry.NewRect(w, h)
-}
-
-// description
 
 // =====
 // image
@@ -115,6 +92,9 @@ func NewRect[T c.Number](w, h T) Geometry[T] {
 
 // description
 type Image = image.Image
+
+// description
+type Sprite = image.Sprite
 
 // =====
 // input
@@ -168,24 +148,20 @@ type Mouse = input.Mouse
 // description
 type Shape = shape.Shape
 
-// ======
-// sprite
-// ======
+// description
+type EllipeShape = shape.Ellipse
+
+var NewCircleShape = shape.NewCircle
 
 // description
-type Sprite = sprite.Sprite
+type RectShape = shape.Rect
 
-// ====
-// text
-// ====
+var NewRectShape = shape.NewRect
 
-const (
-	AlignStart  = text.AlignStart
-	AlignCenter = text.AlignCenter
-	AlignEnd    = text.AlignEnd
-)
+// description
+type PathShape = shape.Path
 
-type Text = text.Text
+var NewPathShape = shape.NewPath
 
 // =========
 // transform

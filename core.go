@@ -5,6 +5,7 @@ import (
 	"github.com/vistormu/xpeto/app"
 
 	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/pkg"
 	"github.com/vistormu/xpeto/core/schedule"
 
 	"github.com/vistormu/xpeto/core/pkg/event"
@@ -226,6 +227,8 @@ var Exit = schedule.Exit
 // #############
 // CORE PACKAGES
 // #############
+
+type Pkg = pkg.Pkg
 
 // =====
 // event

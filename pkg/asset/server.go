@@ -147,6 +147,7 @@ func AddAsset[T any](w *ecs.World) {
 
 	if bType.Kind() != reflect.Struct {
 		log.LogError(w, "the asset bundle must be a struct", log.F("got", bType.Kind().String()))
+		return
 	}
 
 	// iterate over the bundle
