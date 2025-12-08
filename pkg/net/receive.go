@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg/log"
+	"github.com/vistormu/xpeto/core/log"
 	"github.com/vistormu/xpeto/pkg/net/codec"
 	"github.com/vistormu/xpeto/pkg/net/transport"
 )

@@ -5,8 +5,8 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/vistormu/xpeto/core"
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg"
 	"github.com/vistormu/xpeto/core/schedule"
 )
 
@@ -14,7 +14,7 @@ func initWorld() *ecs.World {
 	w := ecs.NewWorld()
 	sch := schedule.NewScheduler()
 
-	pkg.CorePkgs(w, sch)
+	core.CorePkgs(w, sch)
 
 	return w
 }

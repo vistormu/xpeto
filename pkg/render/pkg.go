@@ -5,10 +5,10 @@ import (
 	"github.com/vistormu/xpeto/core/schedule"
 )
 
-func Pkg(w *ecs.World, sch *schedule.Scheduler) {
+func Pkg[C any](w *ecs.World, sch *schedule.Scheduler) {
 	// resources
-	ecs.AddResource(w, newRenderer())
+	ecs.AddResource(w, newRenderer[C]())
 
 	// system
-	schedule.AddSystem(sch, schedule.Draw, draw).Label("render.draw")
+	schedule.AddSystem(sch, schedule.Draw, render[C]).Label("render.draw")
 }

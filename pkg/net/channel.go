@@ -2,10 +2,9 @@ package net
 
 import (
 	"reflect"
-	"strings"
 
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg/log"
+	"github.com/vistormu/xpeto/core/log"
 	"github.com/vistormu/xpeto/core/schedule"
 
 	"github.com/vistormu/xpeto/pkg/net/codec"
@@ -36,30 +35,6 @@ func baseType(t reflect.Type) reflect.Type {
 		return t.Elem()
 	}
 	return t
-}
-
-func createCodec(w *ecs.World, c string) codec.Codec {
-	switch strings.ToLower(c) {
-	case "gob":
-		return codec.NewGob()
-	case "json":
-		return codec.NewJson()
-
-	default:
-		log.LogError(w, "unknown codec", log.F("got", c))
-		return nil
-	}
-}
-
-func createTransport(w *ecs.World, c string) transport.Transport {
-	switch strings.ToLower(c) {
-	case "udp":
-		return transport.NewUDP()
-
-	default:
-		log.LogError(w, "unknown protocol", log.F("got", c))
-		return nil
-	}
 }
 
 // ===
@@ -101,13 +76,13 @@ func AddChannel[T any](w *ecs.World) {
 		}
 
 		// set fields
-		cod := createCodec(w, encoding)
+		cod := codec.New(w, encoding)
 		if cod == nil {
 			log.LogError(w, "error creating the codec")
 			continue
 		}
 
-		tr := createTransport(w, protocol)
+		tr := transport.New(w, protocol)
 		if tr == nil {
 			log.LogError(w, "error creating the transport")
 			continue

@@ -2,7 +2,7 @@ package net
 
 import (
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg/event"
+	"github.com/vistormu/xpeto/core/event"
 	"github.com/vistormu/xpeto/pkg/net/transport"
 )
 

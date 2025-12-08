@@ -7,7 +7,7 @@ import (
 
 type JsonCodec struct{}
 
-func NewJson() Codec {
+func newJson() Codec {
 	return &JsonCodec{}
 }
 

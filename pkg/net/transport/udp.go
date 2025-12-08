@@ -32,7 +32,7 @@ type UDPTransport struct {
 	bufSize int
 }
 
-func NewUDP() *UDPTransport {
+func newUDP() *UDPTransport {
 	return &UDPTransport{
 		closed:   make(chan struct{}),
 		inbox:    make(chan Packet, 1024),

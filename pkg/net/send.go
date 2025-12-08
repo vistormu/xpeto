@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg/log"
+	"github.com/vistormu/xpeto/core/log"
 )
 
 type Outbox[T any] struct {

@@ -1,9 +1,0 @@
-[language-server.gopls]
-command = "gopls"
-args = ["serve"]
-# config = { buildFlags = ["-tags=headless"] }
-
-[[language]]
-name = "go"
-roots = ["go.mod"]
-language-servers = ["gopls"]

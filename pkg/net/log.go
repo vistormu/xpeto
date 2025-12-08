@@ -2,7 +2,7 @@ package net
 
 import (
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg/log"
+	"github.com/vistormu/xpeto/core/log"
 )
 
 func logTransportErrors(w *ecs.World) {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/vistormu/go-dsa/queue"
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg/log"
+	"github.com/vistormu/xpeto/core/log"
 )
 
 // =====

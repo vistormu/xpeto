@@ -2,11 +2,11 @@
 
 <div align="center">
 
-<a href="https://github.com/vistormu/xpeto" target="_blank" title="go to the repo"><img width="196px" alt="xpeto logo" src="/assets/image.png"></a>
+<a href="https://github.com/vistormu/xpeto" target="_blank" title="go to the repo"><img width="196px" alt="xpeto logo" src="/assets/xpeto.png"></a>
 
-# xpeto<br>an ECS 2D game engine in Go for small games
+# xpeto<br>an ECS 2D engine for apps and games!
 
-_xpeto_ is a simple code-first 2D game engine for Go to help you create small games in your favorite language!
+_xpeto_ is an intuitive code-first 2D engine to help you create apps and games in your favorite language!
 
 <br>
 

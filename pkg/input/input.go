@@ -23,23 +23,23 @@ func newButtonInput[T comparable]() *ButtonInput[T] {
 	}
 }
 
-func (bi *ButtonInput[T]) clear() {
+func (bi *ButtonInput[T]) Clear() {
 	bi.justPressed.Clear()
 	bi.justReleased.Clear()
 }
 
-func (bi *ButtonInput[T]) setDuration(button T, duration int) {
+func (bi *ButtonInput[T]) SetDuration(button T, duration int) {
 	bi.pressDurations[button] = duration
 }
 
-func (bi *ButtonInput[T]) press(button T) {
+func (bi *ButtonInput[T]) Press(button T) {
 	if !bi.pressed.Contains(button) {
 		bi.pressed.Add(button)
 		bi.justPressed.Add(button)
 	}
 }
 
-func (bi *ButtonInput[T]) release(button T) {
+func (bi *ButtonInput[T]) Release(button T) {
 	if bi.pressed.Contains(button) {
 		bi.pressed.Remove(button)
 		bi.justReleased.Add(button)
@@ -47,6 +47,9 @@ func (bi *ButtonInput[T]) release(button T) {
 	}
 }
 
+// ===
+// API
+// ===
 func (bi *ButtonInput[T]) IsPressed(button T) bool {
 	return bi.pressed.Contains(button)
 }
@@ -66,6 +69,10 @@ func (bi *ButtonInput[T]) Duration(button T) int {
 	}
 
 	return duration
+}
+
+func (bi *ButtonInput[T]) Pressed() []T {
+	return bi.pressed.Values()
 }
 
 // ======

@@ -1,54 +1,79 @@
 package render
 
 import (
+	"reflect"
 	"sort"
-
-	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/vistormu/go-dsa/hashmap"
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg/log"
+	"github.com/vistormu/xpeto/core/log"
 )
 
-// =====
-// types
-// =====
-type ExtractionFn[T any] = func(*ecs.World) []T
-type SortFn[T any] = func(v T) uint64
-type RenderFn[T any] = func(screen *ebiten.Image, v T)
+// =========
+// functions
+// =========
+type extractionFn[T any] = func(*ecs.World) []T
+type sortFn[T any] = func(v T) uint64
+type renderFn[C, T any] = func(canvas *C, v T)
+type renderFnWrapper[C any] func(r *renderer[C], w *ecs.World)
 
+// ==========
+// renderable
+// ==========
 type renderable struct {
-	key  uint64
-	draw func(*ebiten.Image)
+	key     uint64
+	batchId int
+	index   int
 }
 
-type renderFn func(r *renderer, w *ecs.World)
+// =====
+// batch
+// =====
+type batch[C any] interface {
+	reset()
+	render(canvas *C, index int)
+}
+
+type concreteBatch[C any, T any] struct {
+	data     []T
+	renderFn renderFn[C, T]
+}
+
+func (b *concreteBatch[C, T]) reset() {
+	b.data = b.data[:0]
+}
+
+func (b *concreteBatch[C, T]) render(canvas *C, index int) {
+	b.renderFn(canvas, b.data[index])
+}
 
 // ========
 // renderer
 // ========
-type renderer struct {
+type renderer[C any] struct {
 	extractionFns *hashmap.TypeMap
 	sortFns       *hashmap.TypeMap
-	renderFns     map[RenderStage][]renderFn
+	renderFns     map[RenderStage][]renderFnWrapper[C]
+	batches       []batch[C]
 	renderables   []renderable
 }
 
-func newRenderer() renderer {
-	return renderer{
+func newRenderer[C any]() *renderer[C] {
+	return &renderer[C]{
 		extractionFns: hashmap.NewTypeMap(),
 		sortFns:       hashmap.NewTypeMap(),
-		renderFns:     make(map[RenderStage][]renderFn),
-		renderables:   make([]renderable, 0),
+		renderFns:     make(map[RenderStage][]renderFnWrapper[C]),
+		batches:       make([]batch[C], 0),
+		renderables:   make([]renderable, 0, 1000),
 	}
 }
 
 // =======
 // systems
 // =======
-func draw(w *ecs.World) {
-	screen, _ := ecs.GetResource[ebiten.Image](w)
-	r, _ := ecs.GetResource[renderer](w)
+func render[C any](w *ecs.World) {
+	canvas, _ := ecs.GetResource[C](w)
+	r, _ := ecs.GetResource[renderer[C]](w)
 
 	for _, stage := range stagesOrder {
 		fns, ok := r.renderFns[stage]
@@ -67,7 +92,7 @@ func draw(w *ecs.World) {
 		})
 
 		for _, re := range r.renderables {
-			re.draw(screen)
+			r.batches[re.batchId].render(canvas, re.index)
 		}
 	}
 }
@@ -75,66 +100,76 @@ func draw(w *ecs.World) {
 // ===
 // API
 // ===
-func AddExtractionFn[T any](w *ecs.World, fn ExtractionFn[T]) {
-	r, ok := ecs.GetResource[renderer](w)
+func AddExtractionFn[C, T any](w *ecs.World, fn extractionFn[T]) {
+	r, ok := ecs.GetResource[renderer[C]](w)
 	if !ok {
-		log.LogError(w, "could not execute AddExtractionFn: render.Pkg not added")
+		log.LogError(w, renderPkgErr, log.F("function", "AddExtractionFunction[C, T any]"), log.F("canvas", reflect.TypeFor[C]().String()), log.F("type", reflect.TypeFor[T]().String()))
 		return
 	}
 
 	hashmap.Add(r.extractionFns, fn)
 }
 
-func AddSortFn[T any](w *ecs.World, fn SortFn[T]) {
-	r, ok := ecs.GetResource[renderer](w)
+func AddSortFn[C, T any](w *ecs.World, fn sortFn[T]) {
+	r, ok := ecs.GetResource[renderer[C]](w)
 	if !ok {
-		log.LogError(w, "could not execute AddSortFn: render.Pkg not added")
+		log.LogError(w, renderPkgErr, log.F("function", "AddSort[C, T any]"), log.F("canvas", reflect.TypeFor[C]().String()), log.F("type", reflect.TypeFor[T]().String()))
 		return
 	}
 
 	hashmap.Add(r.sortFns, fn)
 }
 
-func AddRenderFn[T any](w *ecs.World, stage RenderStage, fn RenderFn[T]) {
-	r, ok := ecs.GetResource[renderer](w)
+func AddRenderFn[C, T any](w *ecs.World, stage RenderStage, fn renderFn[C, T]) {
+	r, ok := ecs.GetResource[renderer[C]](w)
 	if !ok {
-		log.LogError(w, "cannot execute AddRenderFn: render.Pkg not included")
+		log.LogError(w, renderPkgErr, log.F("function", "AddRenderFn[C, T any]"), log.F("canvas", reflect.TypeFor[C]().String()), log.F("type", reflect.TypeFor[T]().String()))
+		return
+	}
+
+	// create batch
+	newBatch := &concreteBatch[C, T]{
+		data:     make([]T, 0, 100),
+		renderFn: fn,
+	}
+	batchId := len(r.batches)
+	r.batches = append(r.batches, newBatch)
+
+	exFn, okEx := hashmap.Get[extractionFn[T]](r.extractionFns)
+	sortFn, okSort := hashmap.Get[sortFn[T]](r.sortFns)
+	if !okEx {
+		log.LogError(w, missingExFnErr, log.F("function", "AddRenderFn"), log.F("type", reflect.TypeFor[T]().String()))
+		return
+	}
+	if !okSort {
+		log.LogError(w, missingSortFnErr, log.F("function", "AddRenderFn"), log.F("type", reflect.TypeFor[T]().String()))
 		return
 	}
 
 	_, ok = r.renderFns[stage]
 	if !ok {
-		r.renderFns[stage] = make([]renderFn, 0)
+		r.renderFns[stage] = make([]renderFnWrapper[C], 0)
 	}
 
-	exFn, ok := hashmap.Get[ExtractionFn[T]](r.extractionFns)
-	if !ok {
-		log.LogError(w, "AddExtractionFn should be executed before AddRenderFn")
-		return
-	}
-
-	sortFn, ok := hashmap.Get[SortFn[T]](r.sortFns)
-	if !ok {
-		log.LogError(w, "AddSortFn should be executed before AddRenderFn")
-		return
-	}
-
-	r.renderFns[stage] = append(r.renderFns[stage], func(r *renderer, w *ecs.World) {
+	r.renderFns[stage] = append(r.renderFns[stage], func(r *renderer[C], w *ecs.World) {
 		renderables := (*exFn)(w)
 		if len(renderables) == 0 {
 			return
 		}
 
+		newBatch.reset()
+		currentBatchIndex := 0
+
 		for _, re := range renderables {
-			reCopy := re
-			key := (*sortFn)(reCopy)
+			key := (*sortFn)(re)
+			newBatch.data = append(newBatch.data, re)
 
 			r.renderables = append(r.renderables, renderable{
-				key: key,
-				draw: func(screen *ebiten.Image) {
-					fn(screen, reCopy)
-				},
+				key:     key,
+				batchId: batchId,
+				index:   currentBatchIndex,
 			})
+			currentBatchIndex++
 		}
 	})
 }

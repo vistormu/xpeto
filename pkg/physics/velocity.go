@@ -2,7 +2,7 @@ package physics
 
 import (
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg/time"
+	"github.com/vistormu/xpeto/core/time"
 	"github.com/vistormu/xpeto/pkg/transform"
 )
 

@@ -2,14 +2,16 @@ package net
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/gob"
+	"io"
 	"net"
 	"testing"
 	"time"
 
+	"github.com/vistormu/xpeto/core"
 	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/pkg"
-	"github.com/vistormu/xpeto/core/pkg/event"
+	"github.com/vistormu/xpeto/core/event"
 	"github.com/vistormu/xpeto/core/schedule"
 )
 
@@ -20,232 +22,256 @@ type Message struct {
 	Content string
 }
 
-// Note: Using 0.0.0.0 to ensure we bind to all interfaces (IPv4)
 type channels struct {
 	UdpGob Channel `protocol:"udp" codec:"gob" listen:"0.0.0.0:9876"`
+	TcpGob Channel `protocol:"tcp" codec:"gob" listen:"0.0.0.0:9877"`
 }
 
-const serverAddr = "127.0.0.1:9876"
+const (
+	udpAddr = "127.0.0.1:9876"
+	tcpAddr = "127.0.0.1:9877"
+)
 
-// =======
-// helpers
-// =======
-func newUdpClient(t *testing.T) *net.UDPConn {
-	// Debug: Print what we are dialing
-	t.Logf("[Test Setup] Creating Client dialing %s...", serverAddr)
-
-	addr, err := net.ResolveUDPAddr("udp", serverAddr)
-	if err != nil {
-		t.Fatalf("Failed to resolve address: %v", err)
-	}
-
-	conn, err := net.DialUDP("udp", nil, addr)
-	if err != nil {
-		t.Fatalf("Failed to create test client: %v", err)
-	}
-
-	return conn
-}
+// =============================================================================
+// UDP TEST
+// =============================================================================
 
 func TestUdpGob(t *testing.T) {
-	// initialize app
+	// 1. Setup
+	w, sch := setupWorld(t)
+
+	// 2. Client Setup (Raw UDP)
+	t.Log("[Test Setup] Creating UDP Client...")
+	raddr, _ := net.ResolveUDPAddr("udp", udpAddr)
+	client, err := net.DialUDP("udp", nil, raddr)
+	if err != nil {
+		t.Fatalf("Failed to create UDP client: %v", err)
+	}
+	defer client.Close()
+
+	// 3. Connect (Send Handshake)
+	t.Log("[Action] Sending 'Hello UDP'...")
+	var buf bytes.Buffer
+	gob.NewEncoder(&buf).Encode(Message{Content: "Hello UDP"})
+	client.Write(buf.Bytes())
+
+	// 4. Wait for Event
+	clientAddress := waitForEvent(t, w, sch, ClientConnected)
+
+	// 5. Create Entity
+	t.Logf("[Action] Creating Entity for %s...", clientAddress)
+	channelsRes, _ := ecs.GetResource[channels](w)
+	e := ecs.AddEntity(w)
+	ecs.AddComponent(w, e, Connection{
+		Address: clientAddress,
+		Channel: channelsRes.UdpGob,
+	})
+	ecs.AddComponent(w, e, Inbox[Message]{Data: make([]Message, 0)})
+	ecs.AddComponent(w, e, Outbox[Message]{Data: make([]Message, 0)})
+
+	// 6. Test Receive (Payload)
+	t.Log("[Action] Sending 'Payload UDP'...")
+	buf.Reset()
+	// IMPORTANT: New Encoder for UDP to reset Gob state
+	gob.NewEncoder(&buf).Encode(Message{Content: "Payload UDP"})
+	client.Write(buf.Bytes())
+
+	// Wait and Verify Inbox
+	verifyInbox(t, w, sch, e, "Payload UDP")
+
+	// 7. Test Send (Reply)
+	t.Log("[Action] Queuing Reply...")
+	outbox, _ := ecs.GetComponent[Outbox[Message]](w, e)
+	outbox.Data = append(outbox.Data, Message{Content: "Reply UDP"})
+
+	sch.RunUpdate(w) // Flush outbox
+
+	// Verify Client Receive
+	client.SetReadDeadline(time.Now().Add(time.Second))
+	readBuf := make([]byte, 1024)
+	n, _, err := client.ReadFromUDP(readBuf)
+	if err != nil {
+		t.Fatalf("Client read failed: %v", err)
+	}
+
+	var reply Message
+	gob.NewDecoder(bytes.NewReader(readBuf[:n])).Decode(&reply)
+	if reply.Content != "Reply UDP" {
+		t.Errorf("Expected 'Reply UDP', got '%s'", reply.Content)
+	}
+	t.Log("UDP Round Trip Success!")
+}
+
+// =============================================================================
+// TCP TEST (New)
+// =============================================================================
+
+func TestTcpGob(t *testing.T) {
+	// 1. Setup
+	w, sch := setupWorld(t)
+
+	// 2. Client Setup (TCP)
+	t.Log("[Test Setup] Creating TCP Client...")
+	// Retry loop for TCP since listener startup might race
+	var client net.Conn
+	var err error
+	for i := 0; i < 5; i++ {
+		client, err = net.Dial("tcp", tcpAddr)
+		if err == nil {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if err != nil {
+		t.Fatalf("Failed to connect to TCP server: %v", err)
+	}
+	defer client.Close()
+
+	// 3. Connect
+	// TCP fires 'Connected' event immediately upon Dial, we don't need to send data first.
+	clientAddress := waitForEvent(t, w, sch, ClientConnected)
+
+	// 4. Create Entity
+	t.Logf("[Action] Creating Entity for %s...", clientAddress)
+	channelsRes, _ := ecs.GetResource[channels](w)
+	e := ecs.AddEntity(w)
+	ecs.AddComponent(w, e, Connection{
+		Address: clientAddress,
+		Channel: channelsRes.TcpGob,
+	})
+	ecs.AddComponent(w, e, Inbox[Message]{Data: make([]Message, 0)})
+	ecs.AddComponent(w, e, Outbox[Message]{Data: make([]Message, 0)})
+
+	// 5. Test Receive (With Framing)
+	t.Log("[Action] Sending Framed 'Payload TCP'...")
+	sendFramedTcp(t, client, Message{Content: "Payload TCP"})
+
+	// Wait and Verify Inbox
+	verifyInbox(t, w, sch, e, "Payload TCP")
+
+	// 6. Test Send (Reply)
+	t.Log("[Action] Queuing Reply...")
+	outbox, _ := ecs.GetComponent[Outbox[Message]](w, e)
+	outbox.Data = append(outbox.Data, Message{Content: "Reply TCP"})
+
+	sch.RunUpdate(w) // Flush outbox
+
+	// Verify Client Receive (Read Frame)
+	reply := readFramedTcp(t, client)
+	if reply.Content != "Reply TCP" {
+		t.Errorf("Expected 'Reply TCP', got '%s'", reply.Content)
+	}
+	t.Log("TCP Round Trip Success!")
+}
+
+// =============================================================================
+// TEST HELPERS
+// =============================================================================
+
+func setupWorld(t *testing.T) (*ecs.World, *schedule.Scheduler) {
 	w := ecs.NewWorld()
 	sch := schedule.NewScheduler()
 
-	t.Log("[Init] Initializing Core...")
-	pkg.CorePkgs(w, sch)
-
-	// initialize net
-	t.Log("[Init] Initializing Net...")
+	// Initialize
+	core.CorePkgs(w, sch)
 	Pkg(w, sch)
 	AddChannel[channels](w)
 	AddMessage[Message](sch, "test_msg")
 
-	// =========================================================================
-	// PROBE A: SESSION INTEGRITY
-	// Check if AddChannel correctly populated the internal session resource
-	// =========================================================================
-	sess, ok := ecs.GetResource[session](w)
-	if !ok {
-		t.Fatal("[PROBE A] FAIL: Session resource not found in World")
-	}
-	if len(sess.channels) == 0 {
-		t.Fatal("[PROBE A] FAIL: Session has 0 channels. AddChannel failed to append.")
-	}
-	t.Logf("[PROBE A] OK: Session has %d active channel(s)", len(sess.channels))
-
-	// =========================================================================
-	// PROBE B: OS LISTENER CHECK
-	// Check if the OS actually opened the port
-	// =========================================================================
-	connCheck, err := net.DialTimeout("udp", serverAddr, 100*time.Millisecond)
-	if err != nil {
-		t.Fatalf("[PROBE B] FAIL: Could not reach own server port %s: %v", serverAddr, err)
-	}
-	connCheck.Close()
-	t.Logf("[PROBE B] OK: Port %s is open and accepting traffic", serverAddr)
-
-	// Setup Client
-	client := newUdpClient(t)
-	defer client.Close()
-
-	// Run Startup
 	sch.RunStartup(w)
 
-	// Encode message
-	var buf bytes.Buffer
-	encoder := gob.NewEncoder(&buf)
-	err = encoder.Encode(Message{Content: "Hello Server"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	// === CLEANUP HOOK ===
+	// This runs automatically when the test function ends.
+	t.Cleanup(func() {
+		// 1. Get the session resource where we stored the channels
+		// Note: 'session' is unexported, so we access it via the public generic GetResource
+		// provided your test file is in 'package net' (which it is).
+		if sess, ok := ecs.GetResource[session](w); ok {
+			t.Log("Cleaning up network listeners...")
+			for _, ch := range sess.channels {
+				if ch.Transport != nil {
+					ch.Transport.Close()
+				}
+			}
+		}
+	})
 
-	// Send Packet
-	t.Log("[Action] Sending 'Hello Server' packet...")
-	_, err = client.Write(buf.Bytes())
-	if err != nil {
-		t.Fatal(err)
-	}
+	return w, sch
+}
 
-	// Step engine until client connected
-	var clientAddress string
-	foundConnect := false
-
-	t.Log("[Loop] Starting Game Loop to catch event...")
-
-loop:
-	for i := range 10 {
-		// Wait for OS buffer
-		time.Sleep(time.Millisecond * 20)
-
-		// Run ONE frame
+func waitForEvent(t *testing.T, w *ecs.World, sch *schedule.Scheduler, targetType ClientEventType) string {
+	t.Logf("Waiting for Event %d...", targetType)
+	for i := 0; i < 20; i++ { // 20 frames timeout
+		time.Sleep(10 * time.Millisecond)
 		sch.RunUpdate(w)
 
-		// =====================================================================
-		// PROBE C: CACHE INSPECTION
-		// Did 'dispatch' pick up the packet from the Transport?
-		// =====================================================================
-		// We inspect the internal cache resource directly
-		c, _ := ecs.GetResource[cache](w)
-		t.Logf("   Frame %d: Cache contains %d packets", i, len(c.packets))
-
-		// If cache has packets, print their sender to verify
-		for pIdx, p := range c.packets {
-			t.Logf("      -> Packet[%d] from: %s (Size: %d)", pIdx, p.Sender, len(p.Payload))
-		}
-
-		// =====================================================================
-		// PROBE D: EVENT INSPECTION
-		// Did 'emitEvents' find the event?
-		// =====================================================================
 		events, _ := event.GetEvents[ClientEvent](w)
-		if len(events) > 0 {
-			t.Logf("   Frame %d: Found %d ClientEvents in World", i, len(events))
-		}
-
 		for _, e := range events {
-			t.Logf("      -> Event Type: %d, Addr: %s", e.Type, e.Address)
-			if e.Type == ClientConnected {
-				foundConnect = true
-				clientAddress = e.Address
-				t.Logf("[SUCCESS] Client connected from: %s in %d frames", clientAddress, i)
-				break loop
+			if e.Type == targetType {
+				t.Logf("Found Event from %s", e.Address)
+				return e.Address
 			}
 		}
 	}
+	t.Fatal("Timeout waiting for Client Event")
+	return ""
+}
 
-	if !foundConnect {
-		// Final Debug Dump before failing
-		t.Log("---------------------------------------------------")
-		t.Log("DEBUG SUMMARY:")
-		t.Log("1. If Cache was always 0: 'dispatch' isn't flushing the transport.")
-		t.Log("   (Possible causes: IPv4/IPv6 mismatch, or Transport.readLoop not running)")
-		t.Log("2. If Cache had packets but No Event: 'emitEvents' didn't trigger.")
-		t.Log("   (Possible causes: Packet sender already in session lookup?)")
-		t.Log("---------------------------------------------------")
-		t.Fatal("Did not find ClientConnected event")
-	}
+func verifyInbox(t *testing.T, w *ecs.World, sch *schedule.Scheduler, e ecs.Entity, expected string) {
+	for i := 0; i < 20; i++ {
+		time.Sleep(10 * time.Millisecond)
+		sch.RunUpdate(w)
 
-	// =========================================================================
-	// PHASE 2: DATA TRANSFER
-	// =========================================================================
-
-	// Add receiver and sender
-	channelsRes, _ := ecs.GetResource[channels](w)
-	e := ecs.AddEntity(w)
-	ecs.AddComponent(w, e, Connection{
-		Target:  clientAddress,
-		Channel: channelsRes.UdpGob,
-	})
-	ecs.AddComponent(w, e, Outbox[Message]{
-		Data: make([]Message, 0),
-	})
-	ecs.AddComponent(w, e, Inbox[Message]{
-		Data: make([]Message, 0),
-	})
-
-	t.Log("[Action] Entity created. Waiting for SessionMap update...")
-	sch.RunUpdate(w) // next frame: update session map
-
-	// Send Payload
-	buf.Reset()
-	encoder = gob.NewEncoder(&buf)
-	_ = encoder.Encode(Message{Content: "Payload Data"})
-	t.Log("[Action] Sending 'Payload Data'...")
-	client.Write(buf.Bytes())
-
-	time.Sleep(20 * time.Millisecond)
-	sch.RunUpdate(w) // next frame: from cache to inbox
-
-	// Get data
-	inbox, ok := ecs.GetComponent[Inbox[Message]](w, e)
-	if !ok {
-		t.Fatal("Inbox component missing")
-	}
-
-	t.Logf("[Check] Inbox contains %d messages", len(inbox.Data))
-	if len(inbox.Data) == 0 {
-		// Debug the cache again
-		c, _ := ecs.GetResource[cache](w)
-		t.Logf("[Debug] Cache has %d packets. SessionLookup Size: %d", len(c.packets), len(sess.lookup))
-		for k, v := range sess.lookup {
-			t.Logf("   -> Map: %s = Entity %d", k, v)
+		inbox, ok := ecs.GetComponent[Inbox[Message]](w, e)
+		if ok && len(inbox.Data) > 0 {
+			if inbox.Data[0].Content == expected {
+				inbox.Data = inbox.Data[:0] // Clear
+				return
+			}
 		}
-		t.Fatal("Inbox is empty, expected 1 message")
+	}
+	t.Fatalf("Timeout waiting for Inbox message: %s", expected)
+}
+
+// === TCP FRAMING HELPERS ===
+
+func sendFramedTcp(t *testing.T, conn net.Conn, msg Message) {
+	// 1. Encode Gob
+	var buf bytes.Buffer
+	gob.NewEncoder(&buf).Encode(msg)
+	payload := buf.Bytes()
+
+	// 2. Write Header (Uint32 Length)
+	header := make([]byte, 4)
+	binary.LittleEndian.PutUint32(header, uint32(len(payload)))
+	if _, err := conn.Write(header); err != nil {
+		t.Fatal(err)
 	}
 
-	if inbox.Data[0].Content != "Payload Data" {
-		t.Errorf("Expected 'Payload Data', got '%s'", inbox.Data[0].Content)
+	// 3. Write Body
+	if _, err := conn.Write(payload); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func readFramedTcp(t *testing.T, conn net.Conn) Message {
+	// 1. Read Header
+	header := make([]byte, 4)
+	if _, err := io.ReadFull(conn, header); err != nil {
+		t.Fatal(err)
+	}
+	size := binary.LittleEndian.Uint32(header)
+
+	// 2. Read Body
+	payload := make([]byte, size)
+	if _, err := io.ReadFull(conn, payload); err != nil {
+		t.Fatal(err)
 	}
 
-	// Clean inbox
-	inbox.Data = inbox.Data[:0]
-
-	// Add message to outbox
-	outbox, _ := ecs.GetComponent[Outbox[Message]](w, e)
-	outbox.Data = append(outbox.Data, Message{Content: "Reply from ECS"})
-
-	t.Log("[Action] Sending Reply...")
-	sch.RunUpdate(w) // next frame: outbox to transport
-
-	// Read from udp
-	client.SetReadDeadline(time.Now().Add(time.Second * 1))
-	readBuf := make([]byte, 1024)
-	n, _, err := client.ReadFromUDP(readBuf)
-	if err != nil {
-		t.Fatalf("Client failed to receive data: %v", err)
+	// 3. Decode
+	var msg Message
+	if err := gob.NewDecoder(bytes.NewReader(payload)).Decode(&msg); err != nil {
+		t.Fatal(err)
 	}
-
-	// Decode response
-	var receivedMsg Message
-	decoder := gob.NewDecoder(bytes.NewReader(readBuf[:n]))
-	if err := decoder.Decode(&receivedMsg); err != nil {
-		t.Fatalf("Client failed to decode response: %v", err)
-	}
-
-	if receivedMsg.Content != "Reply from ECS" {
-		t.Errorf("Client received wrong message: %s", receivedMsg.Content)
-	}
-
-	t.Log("Success! Round trip completed.")
+	return msg
 }

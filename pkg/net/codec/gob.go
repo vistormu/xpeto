@@ -7,7 +7,7 @@ import (
 
 type GobCodec struct{}
 
-func NewGob() Codec {
+func newGob() Codec {
 	return &GobCodec{}
 }
 
