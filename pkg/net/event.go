@@ -16,6 +16,8 @@ const (
 type ClientEvent struct {
 	Type    ClientEventType
 	Address string
+	Channel Channel
+	Entity  ecs.Entity
 }
 
 func emitEvents(w *ecs.World) {
@@ -31,18 +33,21 @@ func emitEvents(w *ecs.World) {
 				event.AddEvent(w, ClientEvent{
 					Type:    ClientConnected,
 					Address: e.Address,
+					Channel: ch,
 				})
+
 			case transport.EventDisconnected:
+				en, ok := session.lookup[e.Address]
+
 				event.AddEvent(w, ClientEvent{
 					Type:    ClientDisconnected,
 					Address: e.Address,
+					Channel: ch,
+					Entity:  en,
 				})
 
-				en, ok := session.lookup[e.Address]
 				if ok {
 					delete(session.lookup, e.Address)
-					// delete entity with connection?
-					ecs.RemoveComponent[Connection](w, en)
 				}
 			}
 		}

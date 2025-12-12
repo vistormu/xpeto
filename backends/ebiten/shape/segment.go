@@ -13,28 +13,28 @@ import (
 	"github.com/vistormu/xpeto/pkg/transform"
 )
 
-type line struct {
-	shape.Line
+type segment struct {
+	shape.Segment
 	transform.Transform
 
 	snap      bool
 	antialias bool
 }
 
-func extractLine(w *ecs.World) []line {
-	q := ecs.NewQuery2[shape.Line, transform.Transform](w)
+func extractSegment(w *ecs.World) []segment {
+	q := ecs.NewQuery2[shape.Segment, transform.Transform](w)
 
 	sc, _ := ecs.GetResource[window.Scaling](w)
 	rw, _ := ecs.GetResource[window.RealWindow](w)
 
-	out := make([]line, 0)
+	out := make([]segment, 0)
 	for _, b := range q.Iter() {
-		l, t := b.Components()
-		if !l.Visible {
+		s, t := b.Components()
+		if !s.Visible {
 			continue
 		}
-		out = append(out, line{
-			Line:      *l,
+		out = append(out, segment{
+			Segment:   *s,
 			Transform: *t,
 			snap:      sc.SnapPixels,
 			antialias: rw.AntiAliasing,
@@ -43,13 +43,13 @@ func extractLine(w *ecs.World) []line {
 	return out
 }
 
-func sortLine(l line) uint64 {
-	return (uint64(l.Layer) << 16) | uint64(l.Order)
+func sortSegment(s segment) uint64 {
+	return (uint64(s.Layer) << 16) | uint64(s.Order)
 }
 
-func drawLine(screen *ebiten.Image, l line) {
-	start := l.Point
-	end := l.End()
+func drawSegment(screen *ebiten.Image, s segment) {
+	start := s.Start
+	end := s.End
 
 	minX := min(start.X, end.X)
 	minY := min(start.Y, end.Y)
@@ -59,34 +59,34 @@ func drawLine(screen *ebiten.Image, l line) {
 	bw := float64(maxX - minX)
 	bh := float64(maxY - minY)
 
-	ax, ay := shared.Offset(bw, bh, l.Anchor)
+	ax, ay := shared.Offset(bw, bh, s.Anchor)
 
-	tlx := l.X + ax
-	tly := l.Y + ay
+	tlx := s.X + ax - float64(minX)
+	tly := s.Y + ay - float64(minY)
 
-	x0 := tlx + float64(start.X-minX)
-	y0 := tly + float64(start.Y-minY)
-	x1 := tlx + float64(end.X-minX)
-	y1 := tly + float64(end.Y-minY)
+	x0 := tlx + float64(start.X)
+	y0 := tly + float64(start.Y)
+	x1 := tlx + float64(end.X)
+	y1 := tly + float64(end.Y)
 
-	if l.snap {
+	if s.snap {
 		x0 = math.Round(x0)
 		y0 = math.Round(y0)
 		x1 = math.Round(x1)
 		y1 = math.Round(y1)
 	}
 
-	for _, s := range l.Stroke {
-		if !s.Visible || s.Width <= 0 {
+	for _, st := range s.Stroke {
+		if !st.Visible || st.Width <= 0 {
 			continue
 		}
 		vector.StrokeLine(
 			screen,
 			float32(x0), float32(y0),
 			float32(x1), float32(y1),
-			s.Width,
-			s.Color,
-			l.antialias,
+			st.Width,
+			st.Color,
+			s.antialias,
 		)
 	}
 }

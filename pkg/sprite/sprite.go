@@ -11,3 +11,6 @@ type Sprite struct {
 	Layer uint16
 	Order uint16
 }
+
+type DefaultSprites struct {
+}

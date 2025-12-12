@@ -6,17 +6,31 @@ import (
 )
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
-	// resources
+	// window
 	ecs.AddResource(w, RealWindow{
-		Width:               1920,
-		Height:              1080,
+		Title:               "xpeto app",
+		Width:               800,
+		Height:              600,
 		FullScreen:          false,
 		AntiAliasing:        false,
 		VSync:               false,
 		RunnableOnUnfocused: true,
+		ResizingMode:        ResizingModeDisabled,
+		SizeLimits:          SizeLimits{-1, -1, -1, -1},
+		Action:              ActionNone,
 	})
+	ecs.AddResource(w, RealWindowObserved{})
 	ecs.AddResource(w, VirtualWindow{
-		Width:  192,
-		Height: 108,
+		Width:  800,
+		Height: 600,
 	})
+
+	// scaling
+	ecs.AddResource(w, Scaling{
+		Mode:       ScalingInteger,
+		SnapPixels: true,
+	})
+
+	// viewport
+	ecs.AddResource(w, ComputeViewport(w))
 }

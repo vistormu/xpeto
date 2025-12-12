@@ -43,7 +43,7 @@ func (p *population) add() Entity {
 		index, _ = p.free.Dequeue()
 	} else {
 		index = uint32(len(p.gens))
-		p.gens = append(p.gens, 0)
+		p.gens = append(p.gens, 1)
 	}
 
 	gen := p.gens[index]

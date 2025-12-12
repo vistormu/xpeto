@@ -9,6 +9,11 @@ type Rect[T c.Number] struct {
 	Height T
 }
 
+func (r *Rect[T]) Resize(w, h T) {
+	r.Width = w
+	r.Height = h
+}
+
 func NewRect[T c.Number](w, h T) Rect[T] {
 	return Rect[T]{w, h}
 }

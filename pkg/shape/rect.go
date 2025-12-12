@@ -18,17 +18,14 @@ func NewRect(w, h float32) Rect {
 	}
 }
 
-func (r Rect) AddFillSolid(c color.Color) Rect {
-	r.Shape = r.Shape.AddFillSolid(c)
-	return r
+func (r *Rect) AddFillSolid(c color.Color) {
+	r.Shape.AddFillSolid(c)
 }
 
-func (r Rect) AddStroke(c color.Color, w float32) Rect {
-	r.Shape = r.Shape.AddStroke(c, w)
-	return r
+func (r *Rect) AddStroke(c color.Color, w float32) {
+	r.Shape.AddStroke(c, w)
 }
 
-func (r Rect) AddOrder(l, o uint16) Rect {
-	r.Shape = r.Shape.AddOrder(l, o)
-	return r
+func (r *Rect) AddOrder(l, o uint16) {
+	r.Shape.AddOrder(l, o)
 }

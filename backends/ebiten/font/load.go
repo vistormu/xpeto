@@ -12,7 +12,10 @@ func load(data []byte, path string) (*font, error) {
 		return nil, err
 	}
 
-	font := &font{face}
+	font := &font{
+		GoTextFaceSource: face,
+		faces:            make(map[float64]ebitext.Face),
+	}
 
 	return font, nil
 }

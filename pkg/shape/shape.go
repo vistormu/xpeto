@@ -2,6 +2,8 @@ package shape
 
 import (
 	"image/color"
+
+	"github.com/vistormu/xpeto/pkg/render"
 )
 
 // =====
@@ -13,6 +15,7 @@ type Shape struct {
 	Stroke  []Stroke
 	Layer   uint16
 	Order   uint16
+	Anchor  render.Anchor
 }
 
 func newShape() Shape {
@@ -23,31 +26,29 @@ func newShape() Shape {
 	}
 }
 
-func (s Shape) AddFillSolid(c color.Color) Shape {
+func (s *Shape) AddFillSolid(c color.Color) {
 	s.Fill = append(s.Fill, Fill{
 		Visible: true,
 		Type:    FillSolid,
 		Color:   c,
 	})
-
-	return s
 }
 
-func (s Shape) AddStroke(c color.Color, w float32) Shape {
+func (s *Shape) SetFillSolid(i int, c color.Color) {
+	s.Fill[i].Color = c
+}
+
+func (s *Shape) AddStroke(c color.Color, w float32) {
 	s.Stroke = append(s.Stroke, Stroke{
 		Visible: true,
 		Color:   c,
 		Width:   w,
 	})
-
-	return s
 }
 
-func (s Shape) AddOrder(l uint16, o uint16) Shape {
+func (s *Shape) AddOrder(l uint16, o uint16) {
 	s.Layer = l
 	s.Order = o
-
-	return s
 }
 
 // ====

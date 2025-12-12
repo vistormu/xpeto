@@ -9,6 +9,8 @@ import (
 )
 
 func corePkgs(w *ecs.World, sch *schedule.Scheduler) {
+	ecs.AddResource(w, screenBuffer{})
+
 	time.Pkg(w, sch)
 	window.Pkg(w, sch)
 }

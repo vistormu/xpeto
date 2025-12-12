@@ -16,7 +16,9 @@ import (
 
 	"github.com/vistormu/xpeto/pkg"
 	"github.com/vistormu/xpeto/pkg/asset"
+	"github.com/vistormu/xpeto/pkg/geometry"
 	"github.com/vistormu/xpeto/pkg/input"
+	"github.com/vistormu/xpeto/pkg/render"
 	"github.com/vistormu/xpeto/pkg/shape"
 	"github.com/vistormu/xpeto/pkg/sprite"
 	"github.com/vistormu/xpeto/pkg/text"
@@ -363,6 +365,114 @@ var PauseClock = time.PauseClock
 // condition
 // ---------
 
+// ======
+// window
+// ======
+
+// -------
+// scaling
+// -------
+
+// description
+type ScalingMode = window.ScalingMode
+
+const (
+	ScalingFree    ScalingMode = window.ScalingFree
+	ScalingInteger ScalingMode = window.ScalingInteger
+	ScalingHiDPI   ScalingMode = window.ScalingHiDPI
+)
+
+// description
+var SetScalingMode = window.SetScalingMode
+
+// description
+var SetPixelSnap = window.SetPixelSnap
+
+// description
+// var GetDesiredVirtualSize = window.GetDesiredVirtualSize
+
+// --------
+// viewport
+// --------
+
+// description
+type Viewport = window.Viewport
+
+// description
+var ComputeViewport = window.ComputeViewport
+
+// ------
+// window
+// ------
+
+// description
+type ResizingMode = window.ResizingMode
+
+const (
+	ResizingDisabled   ResizingMode = window.ResizingModeDisabled
+	ResizingEnabled    ResizingMode = window.ResizingModeEnabled
+	ResizingFullscreen ResizingMode = window.ResizingModeOnlyFullscreenEnabled
+)
+
+// description
+type WindowAction = window.WindowAction
+
+const (
+	ActionNone     WindowAction = window.ActionNone
+	ActionMaximize WindowAction = window.ActionMaximize
+	ActionMinimize WindowAction = window.ActionMinimize
+	ActionRestore  WindowAction = window.ActionRestore
+)
+
+// description
+type RealWindow = window.RealWindow
+
+// description
+type VirtualWindow = window.VirtualWindow
+
+// description
+var SetRealWindowSize = window.SetRealWindowSize
+
+// description
+func GetRealWindowSize[T constraints.Number](w *World) (width, height T) {
+	return window.GetRealWindowSize[T](w)
+}
+
+// description
+var SetFullScreen = window.SetFullScreen
+
+// description
+var SetAntiAliasing = window.SetAntiAliasing
+
+// description
+var SetVSync = window.SetVSync
+
+// description
+var SetRunnableOnUnfocused = window.SetRunnableOnUnfocused
+
+// description
+var SetResizingMode = window.SetResizingMode
+
+// description
+var SetWindowSizeLimits = window.SetWindowSizeLimits
+
+// description
+var MaximizeWindow = window.MaximizeWindow
+
+// description
+var MinimizeWindow = window.MinimizeWindow
+
+// description
+var RestoreWindow = window.RestoreWindow
+
+// description
+var SetVirtualWindowSize = window.SetVirtualWindowSize
+
+// description
+func GetVirtualWindowSize[T constraints.Number](w *World) (width, height T) {
+	return window.GetVirtualWindowSize[T](w)
+}
+
 // ###
 // APP
 // ###
@@ -428,20 +538,26 @@ func RemoveAsset[T any](w *World, a Asset) bool {
 // =====
 
 // ====
-// font
+// text
 // ====
 
+type Align = text.Align
+
 const (
-	AlignStart  = text.AlignStart
-	AlignCenter = text.AlignCenter
-	AlignEnd    = text.AlignEnd
+	AlignStart  Align = text.AlignStart
+	AlignCenter Align = text.AlignCenter
+	AlignEnd    Align = text.AlignEnd
 )
 
 type Text = text.Text
 
+type DefaultFonts = text.DefaultFonts
+
 // ========
 // geometry
 // ========
+
+type Vector[T constraints.Number] = geometry.Vector[T]
 
 // ======
 // sprite
@@ -470,15 +586,15 @@ type Sprite = sprite.Sprite
 type Key = input.Key
 
 const (
-	KeyA = input.KeyA
-	KeyD = input.KeyD
-	KeyS = input.KeyS
-	KeyW = input.KeyW
+	KeyA Key = input.KeyA
+	KeyD Key = input.KeyD
+	KeyS Key = input.KeyS
+	KeyW Key = input.KeyW
 
-	KeyEnter = input.KeyEnter
+	KeyEnter Key = input.KeyEnter
 
-	KeyArrowDown = input.KeyArrowDown
-	KeyArrowUp   = input.KeyArrowUp
+	KeyArrowDown Key = input.KeyArrowDown
+	KeyArrowUp   Key = input.KeyArrowUp
 )
 
 // description
@@ -494,6 +610,25 @@ type Mouse = input.Mouse
 // ======
 // render
 // ======
+
+// ------
+// anchor
+// ------
+
+// description
+type Anchor = render.Anchor
+
+const (
+	AnchorCenter      Anchor = render.AnchorCenter
+	AnchorTopLeft     Anchor = render.AnchorTopLeft
+	AnchorTop         Anchor = render.AnchorTop
+	AnchorTopRight    Anchor = render.AnchorTopRight
+	AnchorLeft        Anchor = render.AnchorLeft
+	AnchorRight       Anchor = render.AnchorRight
+	AnchorBottomLeft  Anchor = render.AnchorBottomLeft
+	AnchorBottom      Anchor = render.AnchorBottom
+	AnchorBottomRight Anchor = render.AnchorBottomRight
+)
 
 // =====
 // shape
@@ -517,34 +652,13 @@ type PathShape = shape.Path
 
 var NewPathShape = shape.NewPath
 
+// desctiption
+type SegmentShape = shape.Segment
+
+var NewSegmentShape = shape.NewSegment
+
 // =========
 // transform
 // =========
 
 type Transform = transform.Transform
-
-// ======
-// window
-// ======
-
-// description
-type RealWindow = window.RealWindow
-
-// description
-type VirtualWindow = window.VirtualWindow
-
-// description
-var SetRealWindowSize = window.SetRealWindowSize
-
-// description
-var SetVirtualWindowSize = window.SetVirtualWindowSize
-
-// description
-func GetRealWindowSize[T constraints.Number](w *World) (width, height T) {
-	return window.GetRealWindowSize[T](w)
-}
-
-// description
-func GetVirtualWindowSize[T constraints.Number](w *World) (width, height T) {
-	return window.GetVirtualWindowSize[T](w)
-}

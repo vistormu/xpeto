@@ -18,12 +18,12 @@ func NewPath() Path {
 	}
 }
 
-func (p Path) AddStroke(c color.Color, w float32) Path {
-	p.Shape = p.Shape.AddStroke(c, w)
-	return p
+func (p *Path) AddStroke(c color.Color, w float32) {
+	p.Shape.AddStroke(c, w)
 }
 
-func (p Path) AddOrder(l, o uint16) Path {
-	p.Shape = p.Shape.AddOrder(l, o)
-	return p
+// func (p *Path) SetColor(c color.Color)
+
+func (p *Path) AddOrder(l, o uint16) {
+	p.Shape.AddOrder(l, o)
 }

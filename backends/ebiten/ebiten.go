@@ -11,9 +11,11 @@ import (
 	"github.com/vistormu/xpeto/core/window"
 )
 
-// ===========
-// ebiten game
-// ===========
+type screenBuffer struct {
+	screen *ebiten.Image
+	w, h   int
+}
+
 type game struct {
 	w   *ecs.World
 	sch *schedule.Scheduler
@@ -31,39 +33,49 @@ func (g *game) Update() error {
 }
 
 func (g *game) Draw(screen *ebiten.Image) {
-	ecs.AddResource(g.w, screen)
+	// update buffer
+	vw, vh := window.GetVirtualWindowSize[int](g.w)
+	sb, _ := ecs.GetResource[screenBuffer](g.w)
+	if sb.screen == nil || sb.w != vw || sb.h != vh {
+		sb.screen = ebiten.NewImage(vw, vh)
+		sb.w = vw
+		sb.h = vh
+	}
+
+	// draw
+	sb.screen.Clear()
+	ecs.AddResource(g.w, sb.screen)
 	g.sch.RunDraw(g.w)
 	ecs.RemoveResource[ebiten.Image](g.w)
+
+	// update viewport
+	vp, _ := ecs.GetResource[window.Viewport](g.w)
+
+	op := &ebiten.DrawImageOptions{}
+	if vp.Scale > 0 {
+		op.GeoM.Scale(vp.ScaleF, vp.ScaleF)
+	}
+	op.GeoM.Translate(vp.OffsetX, vp.OffsetY)
+
+	screen.Clear()
+	screen.DrawImage(sb.screen, op)
 }
 
-func (g *game) Layout(w, h int) (int, int) {
-	win, _ := ecs.GetResource[window.VirtualWindow](g.w)
-	return win.Width, win.Height
-}
+func (g *game) Layout(outsideW, outsideH int) (int, int) {
+	obs, _ := ecs.GetResource[window.RealWindowObserved](g.w)
+	obs.Width = outsideW
+	obs.Height = outsideH
+	obs.DeviceScale = ebiten.Monitor().DeviceScaleFactor()
 
-// =======
-// backend
-// =======
-func Backend() app.Backend {
-	return &backend{}
-}
+	vw, vh, ok := window.GetDesiredVirtualSize(g.w)
+	if ok {
+		window.SetVirtualWindowSize(g.w, vw, vh)
+	}
 
-type backend struct {
-	w   *ecs.World
-	sch *schedule.Scheduler
-}
+	vp := window.ComputeViewport(g.w)
+	ecs.AddResource(g.w, vp)
 
-func (b *backend) Init(w *ecs.World, sch *schedule.Scheduler) {
-	b.w = w
-	b.sch = sch
+	// w, h := window.GetVirtualWindowSize[int](g.w)
 
-	corePkgs(w, sch)
-}
-
-func (b *backend) Run() error {
-	game := new(game)
-	game.w = b.w
-	game.sch = b.sch
-
-	return ebiten.RunGame(game)
+	return outsideW, outsideH
 }

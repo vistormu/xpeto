@@ -19,3 +19,7 @@ func NewPath[T c.Number]() Path[T] {
 func (p *Path[T]) AddPoint(x, y T) {
 	p.Points = append(p.Points, Vector[T]{x, y})
 }
+
+func (p *Path[T]) Clear() {
+	p.Points = p.Points[:0]
+}

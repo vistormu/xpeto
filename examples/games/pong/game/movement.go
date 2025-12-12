@@ -52,7 +52,7 @@ func moveBall(w *xp.World) {
 func ballTrail(w *xp.World) {
 	b, _ := xp.Query2[xp.Transform, xp.PathShape](w, xp.With[Ball]()).Single()
 	r, p := b.Components()
-	p.Path.AddPoint(float32(r.X), float32(r.Y))
+	p.AddPoint(float32(r.X), float32(r.Y))
 }
 
 func movementMiniPkg(_ *xp.World, sch *xp.Scheduler) {
