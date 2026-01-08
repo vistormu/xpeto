@@ -7,15 +7,13 @@ type Filter = func(w *World, e Entity) bool
 
 func With[T any]() Filter {
 	return func(w *World, e Entity) bool {
-		_, ok := GetComponent[T](w, e)
-		return ok
+		return getStore[T](w.registry).has(e)
 	}
 }
 
 func Without[T any]() Filter {
 	return func(w *World, e Entity) bool {
-		_, ok := GetComponent[T](w, e)
-		return !ok
+		return !getStore[T](w.registry).has(e)
 	}
 }
 
@@ -390,7 +388,7 @@ func pickSmallestDense(providers ...denseProvider) denseProvider {
 
 func passFilters(w *World, e Entity, filters []Filter) bool {
 	for _, flt := range filters {
-		if !flt(w, e) {
+		if flt != nil && !flt(w, e) {
 			return false
 		}
 	}

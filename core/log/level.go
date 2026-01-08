@@ -1,7 +1,5 @@
 package log
 
-import "github.com/vistormu/go-dsa/ansi"
-
 type Level uint8
 
 const (
@@ -10,20 +8,22 @@ const (
 	Warning
 	Error
 	Fatal
+	MaxLevel = Fatal
 )
 
-var levelToString = map[Level]string{
-	Debug:   "  [debug]",
-	Info:    "   [info]",
-	Warning: "[warning]",
-	Error:   "  [error]",
-	Fatal:   "  [fatal]",
-}
-
-var levelToColor = map[Level]string{
-	Debug:   ansi.Blue,
-	Info:    ansi.Green,
-	Warning: ansi.Yellow,
-	Error:   ansi.Red,
-	Fatal:   ansi.BgRed,
+func (l Level) String() string {
+	switch l {
+	case Debug:
+		return "debug"
+	case Info:
+		return "info"
+	case Warning:
+		return "warning"
+	case Error:
+		return "error"
+	case Fatal:
+		return "fatal"
+	default:
+		return "unknown"
+	}
 }

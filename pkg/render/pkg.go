@@ -10,5 +10,7 @@ func Pkg[C any](w *ecs.World, sch *schedule.Scheduler) {
 	ecs.AddResource(w, newRenderer[C]())
 
 	// system
-	schedule.AddSystem(sch, schedule.Draw, render[C]).Label("render.draw")
+	schedule.AddSystem(sch, schedule.Draw, render[C],
+		schedule.SystemOpt.Label("render.draw"),
+	)
 }

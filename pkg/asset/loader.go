@@ -3,6 +3,7 @@ package asset
 import (
 	"fmt"
 	"io/fs"
+	"runtime"
 	"sync"
 
 	"github.com/vistormu/go-dsa/queue"
@@ -33,15 +34,27 @@ type result struct {
 // ======
 type loader struct {
 	mu       sync.Mutex
-	requests *queue.QueueArray[request]
+	requests *queue.Queue[request]
 	pending  []result
+	sem      chan struct{}
 }
 
 func newLoader() loader {
+	n := max(runtime.GOMAXPROCS(0)*2, 4)
+
 	return loader{
-		requests: queue.NewQueueArray[request](),
+		requests: queue.NewQueue[request](),
 		pending:  make([]result, 0),
+		sem:      make(chan struct{}, n),
 	}
+}
+
+func (l *loader) acquire() {
+	l.sem <- struct{}{}
+}
+
+func (l *loader) release() {
+	<-l.sem
 }
 
 func (l *loader) enqueue(req request) {
@@ -55,9 +68,8 @@ func (l *loader) drainRequests() []request {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	out := make([]request, 0, l.requests.Length())
-	for !l.requests.IsEmpty() {
-		req, _ := l.requests.Dequeue()
+	out := make([]request, 0, l.requests.Len())
+	for req := range l.requests.Drain() {
 		out = append(out, req)
 	}
 
@@ -86,6 +98,9 @@ func (l *loader) drainResults() []result {
 // =======
 func readFile(s *server, req request) ([]byte, error) {
 	base, rel, _ := splitPath(req.path)
+	if base == "" || rel == "" {
+		return nil, fmt.Errorf("invalid asset path %q (expected base/rel)", req.path)
+	}
 
 	fsys, ok := s.staticFS[base]
 	if !ok {
@@ -108,10 +123,19 @@ func readRequests(w *ecs.World) {
 	l, _ := ecs.GetResource[loader](w)
 
 	for _, req := range l.drainRequests() {
+		if !s.population.has(req.asset) {
+			continue
+		}
+
+		s.population.setLoading(req.asset)
+
+		l.acquire()
 		go func(r request) {
-			data, err := readFile(s, req)
+			defer l.release()
+
+			data, err := readFile(s, r)
 			l.addResult(result{
-				req:  req,
+				req:  r,
 				data: data,
 				err:  err,
 			})
@@ -124,7 +148,13 @@ func loadResults(w *ecs.World) {
 	l, _ := ecs.GetResource[loader](w)
 
 	for _, res := range l.drainResults() {
+		if !s.population.has(res.req.asset) {
+			continue
+		}
+
 		if res.err != nil {
+			s.population.setFailed(res.req.asset, res.err)
+
 			log.LogError(w, "failed loading asset",
 				log.F("path", res.req.path),
 				log.F("error", res.err.Error()),
@@ -135,16 +165,23 @@ func loadResults(w *ecs.World) {
 		_, _, ext := splitPath(res.req.path)
 		fn, ok := s.loaders[ext]
 		if !ok {
+			err := fmt.Errorf("loader not found for the extension %s", ext)
+			s.population.setFailed(res.req.asset, err)
+
 			log.LogError(w, "loader not found for extension. this error shouldn't have happened", log.F("ext", ext))
 			continue
 		}
 
 		err := fn(s, res.req, res.data)
 		if err != nil {
+			s.population.setFailed(res.req.asset, err)
 			log.LogError(w, "the asset loader returned an error",
 				log.F("path", res.req.path),
 				log.F("error", err.Error()),
 			)
+			continue
 		}
+
+		s.population.setLoaded(res.req.asset)
 	}
 }

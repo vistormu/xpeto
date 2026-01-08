@@ -6,50 +6,20 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"github.com/vistormu/go-dsa/geometry"
 	"github.com/vistormu/xpeto/backends/ebiten/shared"
-	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/window"
-	"github.com/vistormu/xpeto/pkg/shape"
-	"github.com/vistormu/xpeto/pkg/transform"
 )
 
-type line struct {
-	shape.Line
-	transform.Transform
+func drawLine(screen *ebiten.Image, r renderable) {
+	s := r.Shape
+	l := r.Shape.Line
+	tr := r.Transform
 
-	snap      bool
-	antialias bool
-}
-
-func extractLine(w *ecs.World) []line {
-	q := ecs.NewQuery2[shape.Line, transform.Transform](w)
-
-	sc, _ := ecs.GetResource[window.Scaling](w)
-	rw, _ := ecs.GetResource[window.RealWindow](w)
-
-	out := make([]line, 0)
-	for _, b := range q.Iter() {
-		l, t := b.Components()
-		if !l.Visible {
-			continue
-		}
-		out = append(out, line{
-			Line:      *l,
-			Transform: *t,
-			snap:      sc.SnapPixels,
-			antialias: rw.AntiAliasing,
-		})
-	}
-	return out
-}
-
-func sortLine(l line) uint64 {
-	return (uint64(l.Layer) << 16) | uint64(l.Order)
-}
-
-func drawLine(screen *ebiten.Image, l line) {
 	start := l.Point
-	end := l.End()
+	end := geometry.Vector[float32]{
+		X: start.X + l.Direction.X,
+		Y: start.Y + l.Direction.Y,
+	}
 
 	minX := min(start.X, end.X)
 	minY := min(start.Y, end.Y)
@@ -59,25 +29,25 @@ func drawLine(screen *ebiten.Image, l line) {
 	bw := float64(maxX - minX)
 	bh := float64(maxY - minY)
 
-	ax, ay := shared.Offset(bw, bh, l.Anchor)
+	ax, ay := shared.Offset(bw, bh, r.anchor)
 
-	tlx := l.X + ax
-	tly := l.Y + ay
+	tlx := tr.X + ax
+	tly := tr.Y + ay
 
 	x0 := tlx + float64(start.X-minX)
 	y0 := tly + float64(start.Y-minY)
 	x1 := tlx + float64(end.X-minX)
 	y1 := tly + float64(end.Y-minY)
 
-	if l.snap {
+	if r.snap {
 		x0 = math.Round(x0)
 		y0 = math.Round(y0)
 		x1 = math.Round(x1)
 		y1 = math.Round(y1)
 	}
 
-	for _, s := range l.Stroke {
-		if !s.Visible || s.Width <= 0 {
+	for _, s := range s.Strokes {
+		if s.Width <= 0 {
 			continue
 		}
 		vector.StrokeLine(
@@ -86,7 +56,7 @@ func drawLine(screen *ebiten.Image, l line) {
 			float32(x1), float32(y1),
 			s.Width,
 			s.Color,
-			l.antialias,
+			r.antialias,
 		)
 	}
 }

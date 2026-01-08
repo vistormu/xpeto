@@ -23,25 +23,59 @@ type Message struct {
 }
 
 type channels struct {
-	UdpGob Channel `protocol:"udp" codec:"gob" listen:"0.0.0.0:9876"`
-	TcpGob Channel `protocol:"tcp" codec:"gob" listen:"0.0.0.0:9877"`
+	UdpGob Channel `protocol:"udp" codec:"gob" listen:"localhost:9876"`
+	TcpGob Channel `protocol:"tcp" codec:"gob" listen:"localhost:9877"`
 }
 
 const (
-	udpAddr = "127.0.0.1:9876"
-	tcpAddr = "127.0.0.1:9877"
+	udpAddr = "localhost:9876"
+	tcpAddr = "localhost:9877"
 )
 
-// =============================================================================
-// UDP TEST
-// =============================================================================
+// =======
+// helpers
+// =======
+func cleanup(t *testing.T, w *ecs.World) func() {
+	return func() {
+		t.Log("cleaning up network listeners")
 
+		session, ok := ecs.GetResource[session](w)
+		if !ok {
+			return
+		}
+
+		for _, ch := range session.channels {
+			if ch.Transport != nil {
+				ch.Transport.Close()
+			}
+		}
+	}
+}
+
+func setupWorld(t *testing.T) (*ecs.World, *schedule.Scheduler) {
+	w := ecs.NewWorld()
+	sch := schedule.NewScheduler()
+
+	core.CorePkgs(w, sch)
+	Pkg(w, sch)
+	AddChannel[channels](w)
+	AddMessage[Message](sch, "test_msg")
+
+	schedule.RunStartup(w, sch)
+	schedule.RunUpdate(w, sch)
+	t.Cleanup(cleanup(t, w))
+
+	return w, sch
+}
+
+// =========
+// udp + gob
+// =========
 func TestUdpGob(t *testing.T) {
-	// 1. Setup
 	w, sch := setupWorld(t)
 
-	// 2. Client Setup (Raw UDP)
-	t.Log("[Test Setup] Creating UDP Client...")
+	// create client
+	t.Log("creating upt client")
 	raddr, _ := net.ResolveUDPAddr("udp", udpAddr)
 	client, err := net.DialUDP("udp", nil, raddr)
 	if err != nil {
@@ -49,7 +83,7 @@ func TestUdpGob(t *testing.T) {
 	}
 	defer client.Close()
 
-	// 3. Connect (Send Handshake)
+	// send message
 	t.Log("[Action] Sending 'Hello UDP'...")
 	var buf bytes.Buffer
 	gob.NewEncoder(&buf).Encode(Message{Content: "Hello UDP"})
@@ -84,7 +118,7 @@ func TestUdpGob(t *testing.T) {
 	outbox, _ := ecs.GetComponent[Outbox[Message]](w, e)
 	outbox.Data = append(outbox.Data, Message{Content: "Reply UDP"})
 
-	sch.RunUpdate(w) // Flush outbox
+	schedule.RunUpdate(w, sch) // Flush outbox
 
 	// Verify Client Receive
 	client.SetReadDeadline(time.Now().Add(time.Second))
@@ -154,7 +188,7 @@ func TestTcpGob(t *testing.T) {
 	outbox, _ := ecs.GetComponent[Outbox[Message]](w, e)
 	outbox.Data = append(outbox.Data, Message{Content: "Reply TCP"})
 
-	sch.RunUpdate(w) // Flush outbox
+	schedule.RunUpdate(w, sch) // Flush outbox
 
 	// Verify Client Receive (Read Frame)
 	reply := readFramedTcp(t, client)
@@ -164,46 +198,11 @@ func TestTcpGob(t *testing.T) {
 	t.Log("TCP Round Trip Success!")
 }
 
-// =============================================================================
-// TEST HELPERS
-// =============================================================================
-
-func setupWorld(t *testing.T) (*ecs.World, *schedule.Scheduler) {
-	w := ecs.NewWorld()
-	sch := schedule.NewScheduler()
-
-	// Initialize
-	core.CorePkgs(w, sch)
-	Pkg(w, sch)
-	AddChannel[channels](w)
-	AddMessage[Message](sch, "test_msg")
-
-	sch.RunStartup(w)
-
-	// === CLEANUP HOOK ===
-	// This runs automatically when the test function ends.
-	t.Cleanup(func() {
-		// 1. Get the session resource where we stored the channels
-		// Note: 'session' is unexported, so we access it via the public generic GetResource
-		// provided your test file is in 'package net' (which it is).
-		if sess, ok := ecs.GetResource[session](w); ok {
-			t.Log("Cleaning up network listeners...")
-			for _, ch := range sess.channels {
-				if ch.Transport != nil {
-					ch.Transport.Close()
-				}
-			}
-		}
-	})
-
-	return w, sch
-}
-
 func waitForEvent(t *testing.T, w *ecs.World, sch *schedule.Scheduler, targetType ClientEventType) string {
 	t.Logf("Waiting for Event %d...", targetType)
 	for i := 0; i < 20; i++ { // 20 frames timeout
 		time.Sleep(10 * time.Millisecond)
-		sch.RunUpdate(w)
+		schedule.RunUpdate(w, sch) // Flush outbox
 
 		events, _ := event.GetEvents[ClientEvent](w)
 		for _, e := range events {
@@ -220,7 +219,7 @@ func waitForEvent(t *testing.T, w *ecs.World, sch *schedule.Scheduler, targetTyp
 func verifyInbox(t *testing.T, w *ecs.World, sch *schedule.Scheduler, e ecs.Entity, expected string) {
 	for i := 0; i < 20; i++ {
 		time.Sleep(10 * time.Millisecond)
-		sch.RunUpdate(w)
+		schedule.RunUpdate(w, sch) // Flush outbox
 
 		inbox, ok := ecs.GetComponent[Inbox[Message]](w, e)
 		if ok && len(inbox.Data) > 0 {

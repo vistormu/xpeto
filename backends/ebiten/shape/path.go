@@ -4,67 +4,23 @@ import (
 	"image"
 	"image/color"
 	"math"
-	"sort"
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"github.com/vistormu/go-dsa/geometry"
 	"github.com/vistormu/xpeto/backends/ebiten/shared"
-	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/window"
 	"github.com/vistormu/xpeto/pkg/render"
 	"github.com/vistormu/xpeto/pkg/shape"
-	"github.com/vistormu/xpeto/pkg/transform"
 )
-
-type path struct {
-	shape.Path
-	transform.Transform
-
-	snap      bool
-	antialias bool
-}
-
-func extractPath(w *ecs.World) []path {
-	q := ecs.NewQuery2[shape.Path, transform.Transform](w)
-
-	sc, _ := ecs.GetResource[window.Scaling](w)
-	rw, _ := ecs.GetResource[window.RealWindow](w)
-
-	out := make([]path, 0)
-	for _, b := range q.Iter() {
-		p, t := b.Components()
-		if !p.Visible || len(p.Points) < 2 {
-			continue
-		}
-		out = append(out, path{
-			Path:      *p,
-			Transform: *t,
-			snap:      sc.SnapPixels,
-			antialias: rw.AntiAliasing,
-		})
-	}
-	return out
-}
-
-func sortPath(p path) uint64 {
-	return (uint64(p.Layer) << 16) | uint64(p.Order)
-}
-
-func drawPaths(screen *ebiten.Image, w *ecs.World) {
-	paths := extractPath(w)
-	sort.Slice(paths, func(i, j int) bool { return sortPath(paths[i]) < sortPath(paths[j]) })
-
-	for _, p := range paths {
-		drawPath(screen, p)
-	}
-}
 
 var (
 	whiteOnce sync.Once
 	whiteImg  *ebiten.Image
 )
+
+type v = geometry.Vector[float64]
 
 func solidWhite() *ebiten.Image {
 	whiteOnce.Do(func() {
@@ -81,23 +37,24 @@ const (
 	maxIdxPerFlush   = 90000
 )
 
-type v2 struct {
-	X, Y float64
-}
+func drawPath(screen *ebiten.Image, r renderable) {
+	s := r.Shape
+	p := r.Shape.Path
+	tr := r.Transform
 
-func drawPath(screen *ebiten.Image, p path) {
 	pts := p.Points
 	if len(pts) < 2 {
 		return
 	}
 
-	world := make([]v2, 0, len(pts))
+	// TODO: don't allocate every frame
+	world := make([]v, 0, len(pts))
 
-	if p.Anchor == render.AnchorTopLeft {
-		tlx := p.X
-		tly := p.Y
+	if r.anchor == render.AnchorTopLeft {
+		tlx := tr.X
+		tly := tr.Y
 		for _, pt := range pts {
-			world = append(world, v2{
+			world = append(world, v{
 				X: tlx + float64(pt.X),
 				Y: tly + float64(pt.Y),
 			})
@@ -115,20 +72,20 @@ func drawPath(screen *ebiten.Image, p path) {
 		bw := float64(maxX - minX)
 		bh := float64(maxY - minY)
 
-		ax, ay := shared.Offset(bw, bh, p.Anchor)
+		ax, ay := shared.Offset(bw, bh, r.anchor)
 
-		tlx := p.X + ax
-		tly := p.Y + ay
+		tlx := tr.X + ax
+		tly := tr.Y + ay
 
 		for _, pt := range pts {
-			world = append(world, v2{
+			world = append(world, v{
 				X: tlx + float64(pt.X-minX),
 				Y: tly + float64(pt.Y-minY),
 			})
 		}
 	}
 
-	if p.snap {
+	if r.snap {
 		for i := range world {
 			world[i].X = math.Round(world[i].X)
 			world[i].Y = math.Round(world[i].Y)
@@ -139,20 +96,20 @@ func drawPath(screen *ebiten.Image, p path) {
 		return
 	}
 
-	for _, s := range p.Stroke {
-		if !s.Visible || s.Width <= 0 {
+	for _, s := range s.Strokes {
+		if s.Width <= 0 {
 			continue
 		}
-		drawStrokeFlushed(screen, world, s, p.antialias)
+		drawStrokeFlushed(screen, world, s, r.antialias)
 	}
 }
 
-func dedupConsecutive(pts []v2) []v2 {
+func dedupConsecutive(pts []v) []v {
 	if len(pts) < 2 {
 		return pts
 	}
 
-	out := make([]v2, 0, len(pts))
+	out := make([]v, 0, len(pts))
 	out = append(out, pts[0])
 
 	lastX := pts[0].X
@@ -172,7 +129,7 @@ func dedupConsecutive(pts []v2) []v2 {
 
 func drawStrokeFlushed(
 	screen *ebiten.Image,
-	pts []v2,
+	pts []v,
 	s shape.Stroke,
 	antialias bool,
 ) {

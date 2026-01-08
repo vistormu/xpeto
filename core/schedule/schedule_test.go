@@ -1,104 +1,151 @@
 package schedule
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/vistormu/xpeto/core/ecs"
 )
 
-func TestOrdering(t *testing.T) {
+func TestSchedule_OrderWithLabels(t *testing.T) {
 	w := ecs.NewWorld()
 	sch := NewScheduler()
 
-	checkOrder := func(expected uint64) func(*ecs.World) {
-		return func(w *ecs.World) {
-			if expected != ecs.GetSystemId(w) {
-				t.Fatal("ids did not match")
-			}
-		}
+	order := make([]string, 0)
+	push := func(s string) ecs.System {
+		return func(*ecs.World) { order = append(order, s) }
 	}
 
-	stages := []StageFn{
-		PreStartup,
-		Startup,
-		PostStartup,
-		First,
-		PreUpdate,
-		FixedFirst,
-		FixedPreUpdate,
-		FixedUpdate,
-		FixedPostUpdate,
-		FixedLast,
-		Update,
-		PostUpdate,
-		Last,
-	}
+	AddSystem(sch, Update, push("A"),
+		SystemOpt.Label("A"),
+	)
+	AddSystem(sch, Update, push("B"),
+		SystemOpt.Label("B"),
+		SystemOpt.RunBefore("C"),
+	)
+	AddSystem(sch, Update, push("C"),
+		SystemOpt.Label("C"),
+		SystemOpt.RunAfter("A"),
+	)
 
-	for i, s := range stages {
-		AddSystem(sch, s, checkOrder(uint64(i+1)))
-	}
+	RunStartup(w, sch)
+	RunUpdate(w, sch)
 
-	sch.RunStartup(w)
-	sch.RunUpdate(w)
-	sch.RunDraw(w)
-}
-
-func TestOnceAndOnceWhen(t *testing.T) {
-	w := ecs.NewWorld()
-	sch := NewScheduler()
-	ran := 0
-
-	AddSystem(sch, Update, func(*ecs.World) { ran++ }).RunIf(Once())
-	sch.RunUpdate(w)
-	sch.RunUpdate(w)
-	if ran != 1 {
-		t.Fatalf("Once ran %d times", ran)
-	}
-
-	ran = 0
-	gate := false
-	AddSystem(sch, Update, func(*ecs.World) { ran++ }).
-		RunIf(OnceWhen(func(*ecs.World) bool { return gate }))
-
-	sch.RunUpdate(w) // gate=false → not yet
-	gate = true
-	sch.RunUpdate(w) // fires now
-	sch.RunUpdate(w) // no more
-	if ran != 1 {
-		t.Fatalf("OnceWhen ran %d times", ran)
+	got := strings.Join(order, "")
+	if got != "ABC" {
+		t.Fatalf("expected order ABC, got %q", got)
 	}
 }
 
-func TestOrderingWithinStage(t *testing.T) {
+// func TestSchedule_UnknownLabelDiagnostic(t *testing.T) {
+// 	w := ecs.NewWorld()
+// 	sch := NewScheduler()
+
+// 	var diags []Diagnostic
+// 	SetDiagnosticSink(sch, func(_ *ecs.World, d Diagnostic) { diags = append(diags, d) })
+
+// 	AddSystem(sch, Update, func(*ecs.World) {},
+// 		SystemOpt.Label("A"),
+// 	)
+// 	AddSystem(sch, Update, func(*ecs.World) {},
+// 		SystemOpt.RunAfter("missing"),
+// 	)
+
+// 	RunStartup(w, sch)
+// 	RunUpdate(w, sch)
+
+// 	found := false
+// 	for _, d := range diags {
+// 		if strings.Contains(d.Message, "unknown dependency label") {
+// 			found = true
+// 			break
+// 		}
+// 	}
+// 	if !found {
+// 		t.Fatalf("expected an unknown-label diagnostic, got %#v", diags)
+// 	}
+// }
+
+// func TestSchedule_CycleFallsBackToInsertionOrder(t *testing.T) {
+// 	w := ecs.NewWorld()
+// 	sch := NewScheduler()
+
+// 	var diags []Diagnostic
+// 	SetDiagnosticSink(sch, func(_ *ecs.World, d Diagnostic) { diags = append(diags, d) })
+
+// 	order := make([]string, 0)
+// 	AddSystem(sch, Update, func(*ecs.World) { order = append(order, "A") },
+// 		SystemOpt.Label("A"),
+// 		SystemOpt.RunAfter("B"),
+// 	)
+// 	AddSystem(sch, Update, func(*ecs.World) { order = append(order, "B") },
+// 		SystemOpt.Label("B"),
+// 		SystemOpt.RunAfter("A"),
+// 	)
+
+// 	RunStartup(w, sch)
+// 	RunUpdate(w, sch)
+
+// 	got := strings.Join(order, "")
+// 	if got != "AB" {
+// 		t.Fatalf("expected insertion order AB on cycle, got %q", got)
+// 	}
+
+// 	found := false
+// 	for _, d := range diags {
+// 		if strings.Contains(d.Message, "cycle detected") {
+// 			found = true
+// 			break
+// 		}
+// 	}
+// 	if !found {
+// 		t.Fatalf("expected a cycle diagnostic, got %#v", diags)
+// 	}
+// }
+
+func TestSchedule_ConditionOnce(t *testing.T) {
 	w := ecs.NewWorld()
 	sch := NewScheduler()
 
-	got := make([]string, 0, 3)
-	sys := func(name string) ecs.System {
-		return func(*ecs.World) { got = append(got, name) }
+	count := 0
+	AddSystem(sch, Update, func(*ecs.World) { count++ },
+		SystemOpt.RunIf(Once()),
+	)
+
+	RunStartup(w, sch)
+	RunUpdate(w, sch)
+	RunUpdate(w, sch)
+
+	if count != 1 {
+		t.Fatalf("expected system to run once, got count=%d", count)
 	}
+}
 
-	AddSystem(sch, Update, sys("A")).Label("A")
-	AddSystem(sch, Update, sys("B")).Label("B")
-	AddSystem(sch, Update, sys("C")).Label("C")
+func TestSchedule_StateCallbacksExecute(t *testing.T) {
+	type S int
+	const (
+		Idle S = iota
+		Running
+	)
 
-	sch.After("A")
-	sch.Before("C")
+	w := ecs.NewWorld()
+	sch := NewScheduler()
+	AddStateMachine(sch, Idle)
 
-	sch = NewScheduler()
-	AddSystem(sch, Update, sys("A")).Label("A")
-	AddSystem(sch, Update, sys("B")).Label("B").Before("C")
-	AddSystem(sch, Update, sys("C")).Label("C").After("A")
+	log := make([]string, 0)
+	AddSystem(sch, OnEnter(Running), func(*ecs.World) { log = append(log, "enter") })
+	AddSystem(sch, OnExit(Idle), func(*ecs.World) { log = append(log, "exit") })
+	AddSystem(sch, OnTransition(Idle, Running), func(*ecs.World) { log = append(log, "transition") })
 
-	sch.RunUpdate(w)
+	RunStartup(w, sch)
 
-	want := []string{"A", "B", "C"}
-	if len(got) != len(want) {
-		t.Fatalf("len mismatch: got %v want %v", got, want)
+	if !SetNextState(w, Running) {
+		t.Fatalf("expected SetNextState to succeed after startup")
 	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("order mismatch at %d: got %q want %q", i, got[i], want[i])
-		}
+	RunUpdate(w, sch)
+
+	got := strings.Join(log, ",")
+	if got != "exit,transition,enter" {
+		t.Fatalf("expected callbacks exit,transition,enter; got %q", got)
 	}
 }

@@ -5,7 +5,7 @@ go 1.25.2
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.9.4
 	github.com/spf13/cobra v1.10.1
-	github.com/vistormu/go-dsa v0.0.11
+	github.com/vistormu/go-dsa v0.1.1
 )
 
 require (
@@ -19,6 +19,6 @@ require (
 	github.com/spf13/pflag v1.0.9 // indirect
 	golang.org/x/image v0.32.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 )

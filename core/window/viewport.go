@@ -23,6 +23,10 @@ func getIntegerViewport(w *ecs.World) Viewport {
 		return Viewport{Scale: 1, ScaleF: 1}
 	}
 
+	if realW < vw || realH < vh {
+		return getFreeViewport(w)
+	}
+
 	sx := realW / vw
 	sy := realH / vh
 	s := max(min(sx, sy), 1)
@@ -31,7 +35,9 @@ func getIntegerViewport(w *ecs.World) Viewport {
 	drawH := vh * s
 
 	offX := float64(realW-drawW) * 0.5
+	offX = max(offX, 0)
 	offY := float64(realH-drawH) * 0.5
+	offY = max(offY, 0)
 
 	return Viewport{
 		Scale:   s,

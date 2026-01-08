@@ -6,8 +6,6 @@ import (
 	"github.com/vistormu/xpeto/core/schedule"
 )
 
-// server is not concurrent safe, so the functions
-// `AddFileSystem`... should be only called during game initialization
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	// resources
 	ecs.AddResource(w, newServer())
@@ -17,6 +15,10 @@ func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	AddStaticFS(w, "default", assets.DefaultFS)
 
 	// systems
-	schedule.AddSystem(sch, schedule.First, readRequests).Label("asset.readRequests")
-	schedule.AddSystem(sch, schedule.First, loadResults).Label("asset.loadResults")
+	schedule.AddSystem(sch, schedule.First, readRequests,
+		schedule.SystemOpt.Label("asset.readRequests"),
+	)
+	schedule.AddSystem(sch, schedule.First, loadResults,
+		schedule.SystemOpt.Label("asset.loadResults"),
+	)
 }

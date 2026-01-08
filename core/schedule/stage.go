@@ -1,10 +1,10 @@
 package schedule
 
-type StageFn = func(*Scheduler, *Schedule) Stage
-type Stage uint32
+type Stage = func(*storage, uint64) stage
+type stage uint32
 
 const (
-	empty Stage = iota
+	empty stage = iota
 	preStartup
 	startup
 	postStartup
@@ -31,31 +31,112 @@ const (
 	exit
 )
 
+func (s stage) String() string {
+	switch s {
+	case preStartup:
+		return "PreStartup"
+	case startup:
+		return "Startup"
+	case postStartup:
+		return "PostStartup"
+	case first:
+		return "First"
+	case preUpdate:
+		return "PreUpdate"
+	case stateTransition:
+		return "StateTransition"
+	case fixedFirst:
+		return "FixedFirst"
+	case fixedPreUpdate:
+		return "FixedPreUpdate"
+	case fixedUpdate:
+		return "FixedUpdate"
+	case fixedPostUpdate:
+		return "FixedPostUpdate"
+	case fixedLast:
+		return "FixedLast"
+	case update:
+		return "Update"
+	case postUpdate:
+		return "PostUpdate"
+	case last:
+		return "Last"
+	case preDraw:
+		return "PreDraw"
+	case draw:
+		return "Draw"
+	case postDraw:
+		return "PostDraw"
+	case exit:
+		return "Exit"
+	default:
+		return "Unknown"
+	}
+}
+
 // startup
-func PreStartup(*Scheduler, *Schedule) Stage  { return preStartup }
-func Startup(*Scheduler, *Schedule) Stage     { return startup }
-func PostStartup(*Scheduler, *Schedule) Stage { return postStartup }
+func PreStartup(*storage, uint64) stage  { return preStartup }
+func Startup(*storage, uint64) stage     { return startup }
+func PostStartup(*storage, uint64) stage { return postStartup }
 
 // update
-func First(*Scheduler, *Schedule) Stage     { return first }
-func PreUpdate(*Scheduler, *Schedule) Stage { return preUpdate }
+func First(*storage, uint64) stage     { return first }
+func PreUpdate(*storage, uint64) stage { return preUpdate }
 
-func StateTransition(*Scheduler, *Schedule) Stage { return stateTransition }
+// states
+func stateTransitionStage(*storage, uint64) stage { return stateTransition }
 
-func FixedFirst(*Scheduler, *Schedule) Stage      { return fixedFirst }
-func FixedPreUpdate(*Scheduler, *Schedule) Stage  { return fixedPreUpdate }
-func FixedUpdate(*Scheduler, *Schedule) Stage     { return fixedUpdate }
-func FixedPostUpdate(*Scheduler, *Schedule) Stage { return fixedPostUpdate }
-func FixedLast(*Scheduler, *Schedule) Stage       { return fixedLast }
+func OnExit[T comparable](from T) Stage {
+	return func(store *storage, id uint64) stage {
+		sm, ok := getStateMachine[T](store)
+		if !ok {
+			return empty
+		}
 
-func Update(*Scheduler, *Schedule) Stage     { return update }
-func PostUpdate(*Scheduler, *Schedule) Stage { return postUpdate }
-func Last(*Scheduler, *Schedule) Stage       { return last }
+		sm.add(&from, nil, id)
+
+		return empty
+	}
+}
+func OnTransition[T comparable](from, to T) Stage {
+	return func(store *storage, id uint64) stage {
+		sm, ok := getStateMachine[T](store)
+		if !ok {
+			return empty
+		}
+
+		sm.add(&from, &to, id)
+
+		return empty
+	}
+}
+func OnEnter[T comparable](to T) Stage {
+	return func(store *storage, id uint64) stage {
+		sm, ok := getStateMachine[T](store)
+		if !ok {
+			return empty
+		}
+
+		sm.add(nil, &to, id)
+
+		return empty
+	}
+}
+
+func FixedFirst(*storage, uint64) stage      { return fixedFirst }
+func FixedPreUpdate(*storage, uint64) stage  { return fixedPreUpdate }
+func FixedUpdate(*storage, uint64) stage     { return fixedUpdate }
+func FixedPostUpdate(*storage, uint64) stage { return fixedPostUpdate }
+func FixedLast(*storage, uint64) stage       { return fixedLast }
+
+func Update(*storage, uint64) stage     { return update }
+func PostUpdate(*storage, uint64) stage { return postUpdate }
+func Last(*storage, uint64) stage       { return last }
 
 // draw
-func PreDraw(*Scheduler, *Schedule) Stage  { return preDraw }
-func Draw(*Scheduler, *Schedule) Stage     { return draw }
-func PostDraw(*Scheduler, *Schedule) Stage { return postDraw }
+func PreDraw(*storage, uint64) stage  { return preDraw }
+func Draw(*storage, uint64) stage     { return draw }
+func PostDraw(*storage, uint64) stage { return postDraw }
 
 // exit
-func Exit(*Scheduler, *Schedule) Stage { return exit }
+func Exit(*storage, uint64) stage { return exit }

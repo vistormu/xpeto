@@ -4,8 +4,7 @@ import (
 	"github.com/vistormu/xpeto/pkg/render"
 )
 
-// transforms any anchor to ebiten's top-left
-func Offset(w, h float64, a render.Anchor) (dx, dy float64) {
+func Offset(w, h float64, a render.AnchorType) (dx, dy float64) {
 	switch a {
 	case render.AnchorCenter:
 		return -w * 0.5, -h * 0.5

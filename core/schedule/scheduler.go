@@ -1,7 +1,9 @@
 package schedule
 
 import (
-	"github.com/vistormu/go-dsa/hashmap"
+	"fmt"
+	"slices"
+
 	"github.com/vistormu/xpeto/core/ecs"
 )
 
@@ -9,278 +11,193 @@ import (
 // schedule
 // ========
 type Scheduler struct {
-	lastSchedule *Schedule
-	schedules    map[Stage][]*Schedule
-	labelToId    map[string]uint64
-	nextId       uint64
-	extra        *hashmap.TypeMap
-	fixedStepsFn func(*ecs.World) int
+	logger     *logger
+	labelIndex *labelIndex
+
+	builder  *builder
+	store    *storage
+	compiler *compiler
+	runner   *runner
 }
 
 func NewScheduler() *Scheduler {
 	return &Scheduler{
-		lastSchedule: nil,
-		schedules:    make(map[Stage][]*Schedule),
-		labelToId:    make(map[string]uint64),
-		nextId:       1,
-		extra:        hashmap.NewTypeMap(),
+		logger:     newLogger(),
+		labelIndex: newLabelIndex(),
+		builder:    newBuilder(),
+		store:      newStorage(),
+		compiler:   newCompiler(),
+		runner:     newRunner(),
 	}
 }
 
-func (sch *Scheduler) addSchedule(s *Schedule) {
-	s.Id = sch.nextId
-	sch.nextId++
-
-	sch.lastSchedule = s
-
-	if s.stage == empty {
+func (sch *Scheduler) flushPending() {
+	if sch == nil || sch.builder == nil || sch.store == nil {
+		return
+	}
+	if sch.builder.node == nil {
 		return
 	}
 
-	_, ok := sch.schedules[s.stage]
-	if !ok {
-		sch.schedules[s.stage] = make([]*Schedule, 0)
-	}
-
-	sch.schedules[s.stage] = append(sch.schedules[s.stage], s)
-}
-
-func (sch *Scheduler) run(w *ecs.World, stages []Stage) {
-	for _, stage := range stages {
-		for _, sch := range sch.schedules[stage] {
-			if sch == nil {
-				continue
-			}
-
-			execute := true
-			for _, c := range sch.Conditions {
-				if c == nil {
-					continue
-				}
-
-				execute = execute && c(w)
-			}
-
-			if execute {
-				ecs.SetSystemInfo(w, sch.Id, sch.Label)
-				sch.System(w)
-			}
-		}
-	}
-}
-
-func (sch *Scheduler) sortAllStages() {
-	for st := range sch.schedules {
-		sch.sortStage(st)
-	}
-}
-
-func (sch *Scheduler) sortStage(stage Stage) {
-	list := sch.schedules[stage]
-	n := len(list)
-	if n <= 1 {
+	n := sch.builder.build()
+	if n == nil {
 		return
 	}
+	sch.store.add(n)
+}
 
-	idToIdx := make(map[uint64]int, n)
-	for i, s := range list {
-		idToIdx[s.Id] = i
+func (sch *Scheduler) compile(w *ecs.World) {
+	// systems
+	sch.flushPending()
+	sch.compiler.compileDirty(sch.store, sch.labelIndex, sch.logger)
+
+	// resources
+	if !ecs.HasResource[RunningSystem](w) {
+		ecs.AddResource(w, RunningSystem{})
 	}
 
-	adj := make([][]int, n)
-	indeg := make([]int, n)
-
-	addEdge := func(u, v int) {
-		if u == v || u < 0 || v < 0 {
-			return
-		}
-		adj[u] = append(adj[u], v)
-		indeg[v]++
-	}
-
-	for i, s := range list {
-		for _, dep := range s.after {
-			if j, ok := idToIdx[dep]; ok {
-				addEdge(j, i)
-			}
-		}
-		for _, dep := range s.before {
-			if j, ok := idToIdx[dep]; ok {
-				addEdge(i, j)
-			}
-		}
-	}
-
-	queue := make([]int, 0, n)
-	for i := range n {
-		if indeg[i] == 0 {
-			queue = append(queue, i)
-		}
-	}
-
-	out := make([]*Schedule, 0, n)
-	for len(queue) > 0 {
-		v := queue[0]
-		queue = queue[1:]
-		out = append(out, list[v])
-
-		for _, w := range adj[v] {
-			indeg[w]--
-			if indeg[w] == 0 {
-				queue = append(queue, w)
-			}
-		}
-	}
-
-	if len(out) == n {
-		sch.schedules[stage] = out
+	if !ecs.HasResource[transitionEvent](w) {
+		ecs.AddResource(w, newTransitionEvent())
 	}
 }
 
-// THIS METHOD SHOULD NOT BE CALLED
-//
-// it should only be called by the `xp.App` struct
-func (sch *Scheduler) RunStartup(w *ecs.World) {
-	sch.sortAllStages()
-	stages := []Stage{preStartup, startup, postStartup}
-	sch.run(w, stages)
+// =======
+// options
+// =======
+type option = func(*Scheduler)
+
+type systemOpt struct{}
+
+var SystemOpt systemOpt
+
+func AddSystem(sch *Scheduler, stage Stage, system ecs.System, opts ...option) {
+	sch.flushPending()
+
+	id := sch.builder.nextId
+	st := stage(sch.store, id)
+
+	sch.builder.add(sch.logger, st, system)
+
+	for _, opt := range opts {
+		if opt != nil {
+			opt(sch)
+		}
+	}
 }
 
-// THIS METHOD SHOULD NOT BE CALLED
-//
-// it should only be called by the `xp.App` struct
-func (sch *Scheduler) RunUpdate(w *ecs.World) {
-	sch.sortAllStages()
+func (systemOpt) Label(label string) option {
+	return func(sch *Scheduler) {
+		sch.builder.label(sch.logger, sch.labelIndex, label)
+	}
+}
+
+func (systemOpt) RunIf(conditions ...ConditionFn) option {
+	return func(sch *Scheduler) {
+		sch.builder.runIf(sch.logger, conditions...)
+	}
+}
+
+func (systemOpt) RunBefore(labels ...string) option {
+	return func(sch *Scheduler) {
+		sch.builder.before(sch.logger, labels...)
+	}
+}
+
+func (systemOpt) RunAfter(labels ...string) option {
+	return func(sch *Scheduler) {
+		sch.builder.after(sch.logger, labels...)
+	}
+}
+
+// ===========
+// backend API
+// ===========
+func RunStartup(w *ecs.World, sch *Scheduler) {
+	sch.compile(w)
+	sch.runner.runStages(w, sch.store, preStartup, startup, postStartup)
+}
+
+func RunUpdate(w *ecs.World, sch *Scheduler) {
+	sch.compile(w)
+
+	tr, _ := ecs.GetResource[transitionEvent](w)
 
 	// first pass
-	stages := []Stage{
-		first,
-		preUpdate,
-		stateTransition,
-	}
-	sch.run(w, stages)
+	sch.runner.runStages(w, sch.store, first, preUpdate, stateTransition)
 
-	// fixed pass
-	steps := 0
-	if sch.fixedStepsFn != nil {
-		n := sch.fixedStepsFn(w)
-		if n > 0 {
-			steps = n
-		}
-	}
-	stages = []Stage{
-		fixedFirst,
-		fixedPreUpdate,
-		fixedUpdate,
-		fixedPostUpdate,
-		fixedLast,
-	}
+	// state transitions
+	sch.runner.runIds(w, sch.store, tr.onExit)
+	sch.runner.runIds(w, sch.store, tr.onTransition)
+	sch.runner.runIds(w, sch.store, tr.onEnter)
+	tr.clear()
 
+	// fixed update
+	steps := max(sch.runner.fixedStepsFn(w), 0)
 	for range steps {
-		sch.run(w, stages)
+		sch.runner.runStages(w, sch.store, fixedFirst, fixedPreUpdate, fixedUpdate, fixedPostUpdate, fixedLast)
 	}
 
 	// last pass
-	stages = []Stage{
-		update,
-		postUpdate,
-		last,
+	sch.runner.runStages(w, sch.store, update, postUpdate, last)
+}
+
+func RunDraw(w *ecs.World, sch *Scheduler) {
+	sch.compile(w)
+	sch.runner.runStages(w, sch.store, preDraw, draw, postDraw)
+}
+
+func RunExit(w *ecs.World, sch *Scheduler) {
+	sch.compile(w)
+	sch.runner.runStages(w, sch.store, exit)
+}
+
+func SetFixedStepsFn(sch *Scheduler, fn func(*ecs.World) int) {
+	if fn != nil {
+		sch.runner.fixedStepsFn = fn
 	}
-	sch.run(w, stages)
 }
 
-// THIS METHOD SHOULD NOT BE CALLED
-//
-// it should only be called by the `xp.App` struct
-func (sch *Scheduler) RunDraw(w *ecs.World) {
-	sch.sortAllStages()
-	stages := []Stage{preDraw, draw, postDraw}
-	sch.run(w, stages)
+// ========
+// debuging
+// ========
+func Diagnostics(sch *Scheduler) []Diagnostic {
+	return sch.logger.diagnostics.ToSlice()
 }
 
-// THIS METHOD SHOULD NOT BE CALLED
-//
-// it should only be called by the `xp.App` struct
-func (sch *Scheduler) RunExit(w *ecs.World) {
-	sch.sortAllStages()
-	sch.run(w, []Stage{exit})
-}
-
-// THIS METHOD SHOULD NOT BE CALLED
-//
-// it sets the number of steps for the fixed stage, set by the `Time` pkg
-func (sch *Scheduler) SetFixedStepsFn(fn func(*ecs.World) int) {
-	sch.fixedStepsFn = fn
-}
-
-// ===
-// API
-// ===
-func AddSystem(sch *Scheduler, stage StageFn, system ecs.System) *Scheduler {
-	s := newSchedule()
-	s.System = system
-	s.stage = stage(sch, s)
-
-	sch.addSchedule(s)
-
-	return sch
-}
-
-func (sch *Scheduler) RunIf(condition ConditionFn) *Scheduler {
-	if sch.lastSchedule == nil {
-		return sch
+func Plan(sch *Scheduler) string {
+	stages := make([]stage, 0, len(sch.store.stages))
+	for st := range sch.store.stages {
+		stages = append(stages, st)
 	}
+	slices.Sort(stages)
 
-	sch.lastSchedule.Conditions = append(sch.lastSchedule.Conditions, condition)
+	var out string
+	for _, st := range stages {
+		ids, ok := sch.store.plan[st]
+		if !ok || len(ids) == 0 {
+			ids = sch.store.stages[st]
+		}
 
-	return sch
-}
+		if len(ids) == 0 {
+			continue
+		}
 
-func (sch *Scheduler) Label(label string) *Scheduler {
-	if sch.lastSchedule == nil {
-		return sch
-	}
+		out += fmt.Sprintf("== %s ==\n", st.String())
 
-	sch.lastSchedule.Label = label
-	sch.labelToId[label] = sch.lastSchedule.Id
+		for i, id := range ids {
+			n, ok := sch.store.get(id)
+			if !ok || n == nil {
+				continue
+			}
 
-	return sch
-}
+			label := n.label
+			if label == "" {
+				label = "<unlabeled>"
+			}
 
-func (sch *Scheduler) After(label string) *Scheduler {
-	if sch.lastSchedule == nil {
-		return sch
+			out += fmt.Sprintf("  %02d: id=%d label=%s\n", i, n.id, label)
+		}
 	}
 
-	id, ok := sch.labelToId[label]
-	if !ok {
-		return sch
-	}
-
-	sch.lastSchedule.after = append(sch.lastSchedule.after, id)
-
-	return sch
-}
-
-func (sch *Scheduler) Before(label string) *Scheduler {
-	if sch.lastSchedule == nil {
-		return sch
-	}
-
-	id, ok := sch.labelToId[label]
-	if !ok {
-		return sch
-	}
-
-	sch.lastSchedule.before = append(sch.lastSchedule.before, id)
-
-	return sch
-}
-
-func AddExtra[T any](sch *Scheduler, v T) {
-	hashmap.Add(sch.extra, v)
-}
-
-func GetExtra[T any](sch *Scheduler) (*T, bool) {
-	return hashmap.Get[T](sch.extra)
+	return out
 }

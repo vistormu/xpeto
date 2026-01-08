@@ -1,54 +1,91 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/vistormu/xpeto/core/ecs"
+	"github.com/vistormu/xpeto/core/log"
 	"github.com/vistormu/xpeto/core/schedule"
 
 	"github.com/vistormu/xpeto/core"
 )
 
+// =======
+// options
+// =======
+type option = func(*App)
+
+type appOpt struct{}
+
+var AppOpt appOpt
+
+func (appOpt) Pkgs(pkgs ...core.Pkg) option {
+	return func(a *App) {
+		a.pkgs = append(a.pkgs, pkgs...)
+	}
+}
+
+// ===
+// app
+// ===
 type App struct {
-	world     *ecs.World
-	scheduler *schedule.Scheduler
-	backend   Backend
-	pkgs      []core.Pkg
+	backend BackendFactory
+	pkgs    []core.Pkg
 }
 
-func NewApp(backend func() Backend) *App {
-	return &App{
-		world:     ecs.NewWorld(),
-		scheduler: schedule.NewScheduler(),
-		backend:   backend(),
-		pkgs:      make([]core.Pkg, 0),
-	}
-}
-
-func (a *App) AddPkg(pkg ...core.Pkg) *App {
-	a.pkgs = append(a.pkgs, pkg...)
-	return a
-}
-
-func (a *App) build() *App {
-	// core packages
-	core.CorePkgs(a.world, a.scheduler)
-
-	// backend packages
-	a.backend.Init(a.world, a.scheduler)
-
-	// user packages
-	for _, pkg := range a.pkgs {
-		pkg(a.world, a.scheduler)
+func NewApp(backend BackendFactory, opts ...option) *App {
+	app := &App{
+		backend: backend,
+		pkgs:    make([]core.Pkg, 0),
 	}
 
-	// startup schedules
-	a.scheduler.RunStartup(a.world)
+	for _, opt := range opts {
+		if opt != nil {
+			opt(app)
+		}
+	}
 
-	return a
+	return app
 }
 
 func (a *App) Run() error {
-	a.build()
-	defer a.scheduler.RunExit(a.world)
+	// core dependencies
+	w := ecs.NewWorld()
+	sch := schedule.NewScheduler()
 
-	return a.backend.Run()
+	core.CorePkgs(w, sch)
+
+	// backend
+	if a.backend == nil {
+		return fmt.Errorf("nil backend\n")
+	}
+	backend, err := a.backend(w, sch)
+	if err != nil {
+		return err
+	}
+
+	// optional dependencies
+	for _, pkg := range a.pkgs {
+		if pkg != nil {
+			pkg(w, sch)
+		}
+	}
+
+	// schedules
+	if ds := schedule.Diagnostics(sch); len(ds) != 0 {
+		msg := "errors detected during schedule compilation\n"
+		for _, d := range ds {
+			msg += fmt.Sprintf("-> %s\n", d.Message)
+			msg += fmt.Sprintf("   |> system: %s (id: %d)\n", d.Label, d.Id)
+			msg += fmt.Sprintf("   |> stage: %s\n\n", d.Stage.String())
+		}
+		return fmt.Errorf(msg)
+	}
+
+	defer schedule.RunExit(w, sch)
+	defer log.RecoverLog(w)()
+
+	schedule.RunStartup(w, sch)
+
+	return backend.Run()
 }

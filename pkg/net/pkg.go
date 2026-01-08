@@ -19,8 +19,16 @@ func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	})
 
 	// systems
-	schedule.AddSystem(sch, schedule.PreUpdate, logTransportErrors).Label("net.logTransportErrors")
-	schedule.AddSystem(sch, schedule.PreUpdate, updateSession).Label("net.updateSession")
-	schedule.AddSystem(sch, schedule.PreUpdate, dispatch).Label("net.dispatch")
-	schedule.AddSystem(sch, schedule.PostUpdate, emitEvents).Label("net.emitEvents")
+	schedule.AddSystem(sch, schedule.PreUpdate, logTransportErrors,
+		schedule.SystemOpt.Label("net.logTransportErrors"),
+	)
+	schedule.AddSystem(sch, schedule.PreUpdate, updateSession,
+		schedule.SystemOpt.Label("net.updateSession"),
+	)
+	schedule.AddSystem(sch, schedule.PreUpdate, dispatch,
+		schedule.SystemOpt.Label("net.dispatch"),
+	)
+	schedule.AddSystem(sch, schedule.PostUpdate, emitEvents,
+		schedule.SystemOpt.Label("net.emitEvents"),
+	)
 }

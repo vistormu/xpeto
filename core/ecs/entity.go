@@ -1,6 +1,8 @@
 package ecs
 
-import "github.com/vistormu/go-dsa/queue"
+import (
+	"github.com/vistormu/go-dsa/queue"
+)
 
 // ======
 // entity
@@ -23,14 +25,14 @@ func (e Entity) index() uint32 {
 // population
 // ==========
 type population struct {
-	free  *queue.QueueArray[uint32]
+	free  *queue.Queue[uint32]
 	gens  []uint32
 	alive uint32
 }
 
 func newPopulation() *population {
 	return &population{
-		free:  queue.NewQueueArray[uint32](),
+		free:  queue.NewQueue[uint32](),
 		gens:  make([]uint32, 0),
 		alive: 0,
 	}
@@ -39,7 +41,7 @@ func newPopulation() *population {
 func (p *population) add() Entity {
 	var index uint32
 
-	if !p.free.IsEmpty() {
+	if !p.free.Empty() {
 		index, _ = p.free.Dequeue()
 	} else {
 		index = uint32(len(p.gens))
@@ -71,4 +73,26 @@ func (p *population) has(e Entity) bool {
 	index := e.index()
 
 	return index < uint32(len(p.gens)) && p.gens[index] == e.gen()
+}
+
+// ===
+// API
+// ===
+func AddEntity(w *World) Entity {
+	return w.population.add()
+}
+
+func RemoveEntity(w *World, e Entity) bool {
+	ok := w.population.remove(e)
+	if !ok {
+		return false
+	}
+
+	removeComponents(w.registry, e)
+
+	return true
+}
+
+func HasEntity(w *World, e Entity) bool {
+	return w.population.has(e)
 }

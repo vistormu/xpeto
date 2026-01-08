@@ -88,6 +88,7 @@ func AddChannel[T any](w *ecs.World) {
 			continue
 		}
 
+		// TODO: don't open the unnecessary port
 		if addr == "" {
 			addr = ":0"
 		}
@@ -104,10 +105,14 @@ func AddChannel[T any](w *ecs.World) {
 	}
 
 	// add bundle to the resources
-	ecs.AddResource(w, b)
+	ecs.AddResource(w, *b)
 }
 
 func AddMessage[T any](sch *schedule.Scheduler, label string) {
-	schedule.AddSystem(sch, schedule.PreUpdate, receive[T]).Label("net.receive." + label)
-	schedule.AddSystem(sch, schedule.PostUpdate, send[T]).Label("net.send." + label)
+	schedule.AddSystem(sch, schedule.PreUpdate, receive[T],
+		schedule.SystemOpt.Label("net.receive."+label),
+	)
+	schedule.AddSystem(sch, schedule.PostUpdate, send[T],
+		schedule.SystemOpt.Label("net.send."+label),
+	)
 }

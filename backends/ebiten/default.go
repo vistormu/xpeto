@@ -14,10 +14,8 @@ import (
 )
 
 func DefaultPkgs(w *ecs.World, sch *schedule.Scheduler) {
-	// core
 	render.Pkg[ebiten.Image](w, sch)
 	input.Pkg(w, sch)
-
 	image.Pkg(w, sch)
 	font.Pkg(w, sch)
 	shape.Pkg(w, sch)

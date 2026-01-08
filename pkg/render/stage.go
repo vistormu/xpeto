@@ -3,15 +3,15 @@ package render
 type RenderStage uint8
 
 const (
-	Transparent RenderStage = iota
-	Opaque
+	Opaque RenderStage = iota
+	Transparent
 	Ui
 	PostFx
 )
 
 var stagesOrder = []RenderStage{
-	Transparent,
 	Opaque,
+	Transparent,
 	Ui,
 	PostFx,
 }

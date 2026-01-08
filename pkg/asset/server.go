@@ -141,9 +141,9 @@ func AddAsset[T any](w *ecs.World) {
 	l, _ := ecs.GetResource[loader](w)
 
 	// types
-	b := new(T)
+	var bundle T
 	bType := baseType(reflect.TypeFor[T]())
-	bValue := reflect.ValueOf(b).Elem()
+	bValue := reflect.ValueOf(&bundle).Elem()
 
 	if bType.Kind() != reflect.Struct {
 		log.LogError(w, "the asset bundle must be a struct", log.F("got", bType.Kind().String()))
@@ -191,6 +191,7 @@ func AddAsset[T any](w *ecs.World) {
 
 		// add asset
 		a := s.population.add()
+		s.population.setRequested(a, path)
 		field.Set(reflect.ValueOf(a))
 
 		// add request
@@ -201,7 +202,7 @@ func AddAsset[T any](w *ecs.World) {
 	}
 
 	// add bundle to the resources
-	ecs.AddResource(w, b)
+	ecs.AddResource(w, bundle)
 }
 
 func GetAsset[T any](w *ecs.World, a Asset) (*T, bool) {
@@ -231,7 +232,59 @@ func RemoveAsset[T any](w *ecs.World, a Asset) bool {
 		return false
 	}
 
-	s.population.remove(a)
+	removed := s.population.remove(a)
+	_ = getStore[T](s.store).remove(a)
 
-	return getStore[T](s.store).remove(a)
+	return removed
+}
+
+func GetAssetState(w *ecs.World, a Asset) (AssetState, bool) {
+	s, ok := ecs.GetResource[server](w)
+	if !ok {
+		log.LogError(w, "cannot execute GetAssetState: asset.Pkg not included")
+		return AssetNone, false
+	}
+	if a == Asset(0) {
+		return AssetNone, false
+	}
+	return s.population.getState(a)
+}
+
+func IsAssetLoaded(w *ecs.World, a Asset) bool {
+	st, ok := GetAssetState(w, a)
+	return ok && st == AssetLoaded
+}
+
+func GetAssetPath(w *ecs.World, a Asset) (string, bool) {
+	s, ok := ecs.GetResource[server](w)
+	if !ok {
+		log.LogError(w, "cannot execute GetAssetPath: asset.Pkg not included")
+		return "", false
+	}
+	if a == Asset(0) {
+		return "", false
+	}
+	if !s.population.has(a) {
+		return "", false
+	}
+	return s.population.path[a.index()], true
+}
+
+func GetAssetError(w *ecs.World, a Asset) (error, bool) {
+	s, ok := ecs.GetResource[server](w)
+	if !ok {
+		log.LogError(w, "cannot execute GetAssetError: asset.Pkg not included")
+		return nil, false
+	}
+	if a == Asset(0) {
+		return nil, false
+	}
+	if !s.population.has(a) {
+		return nil, false
+	}
+	err := s.population.err[a.index()]
+	if err == nil {
+		return nil, false
+	}
+	return err, true
 }

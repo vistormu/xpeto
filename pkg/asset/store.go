@@ -13,8 +13,8 @@ type store[T any] struct {
 	location map[Asset]int
 }
 
-func newStore[T any]() *store[T] {
-	return &store[T]{
+func newStore[T any]() store[T] {
+	return store[T]{
 		dense:    make([]Asset, 0),
 		values:   make([]*T, 0),
 		location: make(map[Asset]int),
@@ -65,13 +65,12 @@ func (s *store[T]) remove(a Asset) bool {
 }
 
 func getStore[T any](r *hashmap.TypeMap) *store[T] {
-	s, ok := hashmap.Get[store[T]](r)
-	if ok {
-		return s
+	_, ok := hashmap.Get[store[T]](r)
+	if !ok {
+		hashmap.Add(r, newStore[T]())
 	}
 
-	ns := newStore[T]()
-	hashmap.Add(r, ns)
+	s, _ := hashmap.Get[store[T]](r)
 
-	return ns
+	return s
 }

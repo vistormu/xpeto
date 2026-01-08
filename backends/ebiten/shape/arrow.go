@@ -7,47 +7,14 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/vistormu/xpeto/backends/ebiten/shared"
-	"github.com/vistormu/xpeto/core/ecs"
-	"github.com/vistormu/xpeto/core/window"
 	"github.com/vistormu/xpeto/pkg/shape"
-	"github.com/vistormu/xpeto/pkg/transform"
 )
 
-type arrow struct {
-	shape.Arrow
-	transform.Transform
+func drawArrow(screen *ebiten.Image, r renderable) {
+	s := r.Shape
+	a := r.Shape.Arrow
+	tr := r.Transform
 
-	snap      bool
-	antialias bool
-}
-
-func extractArrow(w *ecs.World) []arrow {
-	q := ecs.NewQuery2[shape.Arrow, transform.Transform](w)
-
-	sc, _ := ecs.GetResource[window.Scaling](w)
-	rw, _ := ecs.GetResource[window.RealWindow](w)
-
-	out := make([]arrow, 0)
-	for _, b := range q.Iter() {
-		a, t := b.Components()
-		if !a.Visible {
-			continue
-		}
-		out = append(out, arrow{
-			Arrow:     *a,
-			Transform: *t,
-			snap:      sc.SnapPixels,
-			antialias: rw.AntiAliasing,
-		})
-	}
-	return out
-}
-
-func sortArrow(a arrow) uint64 {
-	return (uint64(a.Layer) << 16) | uint64(a.Order)
-}
-
-func drawArrow(screen *ebiten.Image, a arrow) {
 	x0 := float64(a.Start.X)
 	y0 := float64(a.Start.Y)
 	x1 := float64(a.End.X)
@@ -97,10 +64,10 @@ func drawArrow(screen *ebiten.Image, a arrow) {
 	bw := maxX - minX
 	bh := maxY - minY
 
-	ax, ay := shared.Offset(bw, bh, a.Anchor)
+	ax, ay := shared.Offset(bw, bh, r.anchor)
 
-	tlx := a.X + ax
-	tly := a.Y + ay
+	tlx := tr.X + ax
+	tly := tr.Y + ay
 
 	wsx := tlx + (x0 - minX)
 	wsy := tly + (y0 - minY)
@@ -114,7 +81,7 @@ func drawArrow(screen *ebiten.Image, a arrow) {
 	wbx1 := tlx + (hx1 - minX)
 	wby1 := tly + (hy1 - minY)
 
-	if a.snap {
+	if r.snap {
 		wsx = math.Round(wsx)
 		wsy = math.Round(wsy)
 		wtx = math.Round(wtx)
@@ -131,17 +98,14 @@ func drawArrow(screen *ebiten.Image, a arrow) {
 	head.LineTo(float32(wbx1), float32(wby1)) // base corner
 	head.Close()
 
-	for _, f := range a.Fill {
-		if !f.Visible {
-			continue
-		}
+	for _, f := range s.Fills {
 		switch f.Type {
 		case shape.FillSolid:
 			var cs ebiten.ColorScale
 			cs.ScaleWithColor(f.Color)
 
 			draw := &vector.DrawPathOptions{
-				AntiAlias:  a.antialias,
+				AntiAlias:  r.antialias,
 				ColorScale: cs,
 			}
 			vector.FillPath(screen, &head, nil, draw)
@@ -150,14 +114,14 @@ func drawArrow(screen *ebiten.Image, a arrow) {
 		}
 	}
 
-	for _, s := range a.Stroke {
-		if !s.Visible || s.Width <= 0 {
+	for _, s := range s.Strokes {
+		if s.Width <= 0 {
 			continue
 		}
 
 		wbx := tlx + (bx - minX)
 		wby := tly + (by - minY)
-		if a.snap {
+		if r.snap {
 			wbx = math.Round(wbx)
 			wby = math.Round(wby)
 		}
@@ -168,14 +132,14 @@ func drawArrow(screen *ebiten.Image, a arrow) {
 			float32(wbx), float32(wby),
 			s.Width,
 			s.Color,
-			a.antialias,
+			r.antialias,
 		)
 
 		var cs ebiten.ColorScale
 		cs.ScaleWithColor(s.Color)
 
 		draw := &vector.DrawPathOptions{
-			AntiAlias:  a.antialias,
+			AntiAlias:  r.antialias,
 			ColorScale: cs,
 		}
 

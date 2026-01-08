@@ -6,6 +6,10 @@ import (
 )
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
-	schedule.AddSystem(sch, schedule.PreStartup, applyInitial).Label("window.applyInitial")
-	schedule.AddSystem(sch, schedule.First, applyChanges).Label("window.applyChanges")
+	schedule.AddSystem(sch, schedule.PreStartup, applyInitial,
+		schedule.SystemOpt.Label("window.applyInitial"),
+	)
+	schedule.AddSystem(sch, schedule.First, applyChanges,
+		schedule.SystemOpt.Label("window.applyChanges"),
+	)
 }

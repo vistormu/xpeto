@@ -6,8 +6,29 @@ import (
 )
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
-	schedule.AddSystem(sch, schedule.First, updateKeyboardInput).Label("input.updateKeyboardInput")
-	schedule.AddSystem(sch, schedule.First, updateMouseInput).Label("input.updateMouseInput")
-	schedule.AddSystem(sch, schedule.First, updateMouseCursor).Label("input.updateMouseCursor")
-	schedule.AddSystem(sch, schedule.First, updateMouseWheel).Label("input.updateMouseWheel")
+	// keyboard
+	ecs.AddResource(w, newKeyboardState())
+	schedule.AddSystem(sch, schedule.PreUpdate, emitKeyboard,
+		schedule.SystemOpt.Label("ebiten.input.emitKeyboard"),
+		schedule.SystemOpt.RunBefore("input.applyEvents"),
+	)
+
+	// mouse
+	schedule.AddSystem(sch, schedule.PreUpdate, emitMouse,
+		schedule.SystemOpt.Label("ebiten.input.emitMouse"),
+		schedule.SystemOpt.RunBefore("input.applyEvents"),
+	)
+
+	// gamepad
+	ecs.AddResource(w, newGamepadState())
+	schedule.AddSystem(sch, schedule.PreUpdate, emitGamepads,
+		schedule.SystemOpt.Label("ebiten.input.emitGamepads"),
+		schedule.SystemOpt.RunBefore("input.applyEvents"),
+	)
+
+	// text input
+	schedule.AddSystem(sch, schedule.PreUpdate, emitText,
+		schedule.SystemOpt.Label("ebiten.input.emitText"),
+		schedule.SystemOpt.RunBefore("input.applyEvents"),
+	)
 }

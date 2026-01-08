@@ -1,10 +1,6 @@
 package ecs
 
 import (
-	"fmt"
-	"reflect"
-
-	"github.com/vistormu/go-dsa/ansi"
 	"github.com/vistormu/go-dsa/hashmap"
 )
 
@@ -21,82 +17,34 @@ func NewWorld() *World {
 		resources:  hashmap.NewTypeMap(),
 	}
 
-	AddResource(w, systemInfo{})
-
 	return w
 }
 
 // ===
 // API
 // ===
-// entities
-func AddEntity(w *World) Entity {
-	return w.population.add()
+func AddResource[T any](w *World, r T) bool {
+	return hashmap.Add(w.resources, r)
 }
 
-func RemoveEntity(w *World, e Entity) bool {
-	ok := w.population.remove(e)
-	if !ok {
-		return false
+func EnsureResource[T any](w *World, init func() T) *T {
+	r, ok := GetResource[T](w)
+	if ok {
+		return r
 	}
-
-	removeComponents(w.registry, e)
-
-	return true
+	AddResource(w, init())
+	r, _ = GetResource[T](w)
+	return r
 }
 
-func HasEntity(w *World, e Entity) bool {
-	return w.population.has(e)
-}
-
-// components
-func AddComponent[T any](w *World, e Entity, c T) bool {
-	ok := w.population.has(e)
-	if !ok {
-		return false
-	}
-
-	if reflect.TypeFor[T]().Kind() == reflect.Pointer {
-		fmt.Printf("%s%scomponents should be added by value and not by reference%s\n", ansi.Bold, ansi.BgRed, ansi.Reset)
-		return false
-	}
-
-	getStore[T](w.registry).add(e, c)
-
-	return true
-}
-
-func GetComponent[T any](w *World, e Entity) (*T, bool) {
-	ok := w.population.has(e)
-	if !ok {
-		return nil, false
-	}
-
-	return getStore[T](w.registry).get(e)
-}
-
-func RemoveComponent[T any](w *World, e Entity) bool {
-	ok := w.population.has(e)
-	if !ok {
-		return false
-	}
-
-	return getStore[T](w.registry).remove(e)
-}
-
-// resources
-func AddResource[T any](w *World, r T) {
-	hashmap.Add(w.resources, r)
-}
-
-func AddResourceByType(w *World, r any, t reflect.Type) bool {
-	return hashmap.AddByType(w.resources, r, t)
+func RemoveResource[T any](w *World) bool {
+	return hashmap.Remove[T](w.resources)
 }
 
 func GetResource[T any](w *World) (*T, bool) {
 	return hashmap.Get[T](w.resources)
 }
 
-func RemoveResource[T any](w *World) bool {
-	return hashmap.Remove[T](w.resources)
+func HasResource[T any](w *World) bool {
+	return hashmap.Has[T](w.resources)
 }

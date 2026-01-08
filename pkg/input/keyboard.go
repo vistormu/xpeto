@@ -4,6 +4,9 @@ import (
 	"fmt"
 )
 
+// ===
+// key
+// ===
 type Key int
 
 const (
@@ -33,37 +36,84 @@ const (
 	KeyX
 	KeyY
 	KeyZ
-	KeyAltLeft
-	KeyAltRight
+
+	Key0
+	Key1
+	Key2
+	Key3
+	Key4
+	Key5
+	Key6
+	Key7
+	Key8
+	Key9
+	KeyNumpad0
+	KeyNumpad1
+	KeyNumpad2
+	KeyNumpad3
+	KeyNumpad4
+	KeyNumpad5
+	KeyNumpad6
+	KeyNumpad7
+	KeyNumpad8
+	KeyNumpad9
+	KeyNumpadAdd
+	KeyNumpadDecimal
+	KeyNumpadDivide
+	KeyNumpadEnter
+	KeyNumpadEqual
+	KeyNumpadMultiply
+	KeyNumpadSubtract
+
+	KeyBracketLeft
+	KeyBracketRight
+	KeyComma
+	KeyBackspace
+	KeyBackslash
+	KeyEqual
+	KeyBackquote
+	KeyIntlBackslash
+	KeyMinus
+	KeyPeriod
+	KeyQuote
+	KeySemicolon
+	KeySlash
+	KeySpace
+	KeyTab
+
 	KeyArrowDown
 	KeyArrowLeft
 	KeyArrowRight
 	KeyArrowUp
-	KeyBackquote
-	KeyBackslash
-	KeyBackspace
-	KeyBracketLeft
-	KeyBracketRight
-	KeyCapsLock
-	KeyComma
-	KeyContextMenu
+
+	KeyAltLeft
+	KeyAltRight
 	KeyControlLeft
 	KeyControlRight
+	KeyMetaLeft
+	KeyMetaRight
+	KeyShiftLeft
+	KeyShiftRight
+	KeyAlt
+	KeyControl
+	KeyShift
+	KeyMeta
+
+	KeyCapsLock
+	KeyContextMenu
 	KeyDelete
-	KeyDigit0
-	KeyDigit1
-	KeyDigit2
-	KeyDigit3
-	KeyDigit4
-	KeyDigit5
-	KeyDigit6
-	KeyDigit7
-	KeyDigit8
-	KeyDigit9
 	KeyEnd
 	KeyEnter
-	KeyEqual
 	KeyEscape
+	KeyHome
+	KeyInsert
+	KeyNumLock
+	KeyPageDown
+	KeyPageUp
+	KeyPause
+	KeyPrintScreen
+	KeyScrollLock
+
 	KeyF1
 	KeyF2
 	KeyF3
@@ -88,48 +138,8 @@ const (
 	KeyF22
 	KeyF23
 	KeyF24
-	KeyHome
-	KeyInsert
-	KeyIntlBackslash
-	KeyMetaLeft
-	KeyMetaRight
-	KeyMinus
-	KeyNumLock
-	KeyNumpad0
-	KeyNumpad1
-	KeyNumpad2
-	KeyNumpad3
-	KeyNumpad4
-	KeyNumpad5
-	KeyNumpad6
-	KeyNumpad7
-	KeyNumpad8
-	KeyNumpad9
-	KeyNumpadAdd
-	KeyNumpadDecimal
-	KeyNumpadDivide
-	KeyNumpadEnter
-	KeyNumpadEqual
-	KeyNumpadMultiply
-	KeyNumpadSubtract
-	KeyPageDown
-	KeyPageUp
-	KeyPause
-	KeyPeriod
-	KeyPrintScreen
-	KeyQuote
-	KeyScrollLock
-	KeySemicolon
-	KeyShiftLeft
-	KeyShiftRight
-	KeySlash
-	KeySpace
-	KeyTab
-	KeyAlt
-	KeyControl
-	KeyShift
-	KeyMeta
-	KeyMax = KeyMeta
+
+	KeyMax = KeyF24
 )
 
 func (k Key) String() string {
@@ -220,26 +230,26 @@ func (k Key) String() string {
 		return "KeyControlRight"
 	case KeyDelete:
 		return "KeyDelete"
-	case KeyDigit0:
-		return "KeyDigit0"
-	case KeyDigit1:
-		return "KeyDigit1"
-	case KeyDigit2:
-		return "KeyDigit2"
-	case KeyDigit3:
-		return "KeyDigit3"
-	case KeyDigit4:
-		return "KeyDigit4"
-	case KeyDigit5:
-		return "KeyDigit5"
-	case KeyDigit6:
-		return "KeyDigit6"
-	case KeyDigit7:
-		return "KeyDigit7"
-	case KeyDigit8:
-		return "KeyDigit8"
-	case KeyDigit9:
-		return "KeyDigit9"
+	case Key0:
+		return "Key0"
+	case Key1:
+		return "Key1"
+	case Key2:
+		return "Key2"
+	case Key3:
+		return "Key3"
+	case Key4:
+		return "Key4"
+	case Key5:
+		return "Key5"
+	case Key6:
+		return "Key6"
+	case Key7:
+		return "Key7"
+	case Key8:
+		return "Key8"
+	case Key9:
+		return "Key9"
 	case KeyEnd:
 		return "KeyEnd"
 	case KeyEnter:
@@ -374,8 +384,19 @@ func (k Key) String() string {
 	return fmt.Sprintf("Key(%d)", k)
 }
 
+// ========
+// keyboard
+// ========
 type Keyboard = ButtonInput[Key]
 
-func newKeyboard() *Keyboard {
+func newKeyboard() Keyboard {
 	return newButtonInput[Key]()
+}
+
+// ======
+// events
+// ======
+type KeyEvent struct {
+	Key     Key
+	Pressed bool
 }

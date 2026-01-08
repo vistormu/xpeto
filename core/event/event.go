@@ -70,7 +70,7 @@ func (er *eventReader[T]) read(ev *events[T]) ([]T, bool) {
 
 	if count == 0 {
 		ev.mu.RUnlock()
-		return nil, true
+		return nil, false
 	}
 
 	out := make([]T, 0, count)
@@ -92,6 +92,7 @@ func (er *eventReader[T]) read(ev *events[T]) ([]T, bool) {
 			}
 		}
 	}
+
 	ev.mu.RUnlock()
 
 	er.index = latest

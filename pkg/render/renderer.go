@@ -58,8 +58,8 @@ type renderer[C any] struct {
 	renderables   []renderable
 }
 
-func newRenderer[C any]() *renderer[C] {
-	return &renderer[C]{
+func newRenderer[C any]() renderer[C] {
+	return renderer[C]{
 		extractionFns: hashmap.NewTypeMap(),
 		sortFns:       hashmap.NewTypeMap(),
 		renderFns:     make(map[RenderStage][]renderFnWrapper[C]),
@@ -72,8 +72,25 @@ func newRenderer[C any]() *renderer[C] {
 // systems
 // =======
 func render[C any](w *ecs.World) {
-	canvas, _ := ecs.GetResource[C](w)
-	r, _ := ecs.GetResource[renderer[C]](w)
+	canvas, okCanvas := ecs.GetResource[C](w)
+	if !okCanvas {
+		log.LogError(w, renderPkgErr,
+			log.F("function", "render[C any]"),
+			log.F("canvas", reflect.TypeFor[C]().String()),
+			log.F("reason", "missing canvas resource"),
+		)
+		return
+	}
+
+	r, okRenderer := ecs.GetResource[renderer[C]](w)
+	if !okRenderer || r == nil {
+		log.LogError(w, renderPkgErr,
+			log.F("function", "render[C any]"),
+			log.F("canvas", reflect.TypeFor[C]().String()),
+			log.F("reason", "missing renderer resource"),
+		)
+		return
+	}
 
 	for _, stage := range stagesOrder {
 		fns, ok := r.renderFns[stage]
@@ -103,7 +120,11 @@ func render[C any](w *ecs.World) {
 func AddExtractionFn[C, T any](w *ecs.World, fn extractionFn[T]) {
 	r, ok := ecs.GetResource[renderer[C]](w)
 	if !ok {
-		log.LogError(w, renderPkgErr, log.F("function", "AddExtractionFunction[C, T any]"), log.F("canvas", reflect.TypeFor[C]().String()), log.F("type", reflect.TypeFor[T]().String()))
+		log.LogError(w, renderPkgErr,
+			log.F("function", "AddExtractionFn[C, T any]"),
+			log.F("canvas", reflect.TypeFor[C]().String()),
+			log.F("type", reflect.TypeFor[T]().String()),
+		)
 		return
 	}
 
@@ -113,7 +134,11 @@ func AddExtractionFn[C, T any](w *ecs.World, fn extractionFn[T]) {
 func AddSortFn[C, T any](w *ecs.World, fn sortFn[T]) {
 	r, ok := ecs.GetResource[renderer[C]](w)
 	if !ok {
-		log.LogError(w, renderPkgErr, log.F("function", "AddSort[C, T any]"), log.F("canvas", reflect.TypeFor[C]().String()), log.F("type", reflect.TypeFor[T]().String()))
+		log.LogError(w, renderPkgErr,
+			log.F("function", "AddSort[C, T any]"),
+			log.F("canvas", reflect.TypeFor[C]().String()),
+			log.F("type", reflect.TypeFor[T]().String()),
+		)
 		return
 	}
 
@@ -123,7 +148,28 @@ func AddSortFn[C, T any](w *ecs.World, fn sortFn[T]) {
 func AddRenderFn[C, T any](w *ecs.World, stage RenderStage, fn renderFn[C, T]) {
 	r, ok := ecs.GetResource[renderer[C]](w)
 	if !ok {
-		log.LogError(w, renderPkgErr, log.F("function", "AddRenderFn[C, T any]"), log.F("canvas", reflect.TypeFor[C]().String()), log.F("type", reflect.TypeFor[T]().String()))
+		log.LogError(w, renderPkgErr,
+			log.F("function", "AddRenderFn[C, T any]"),
+			log.F("canvas", reflect.TypeFor[C]().String()),
+			log.F("type", reflect.TypeFor[T]().String()),
+		)
+		return
+	}
+
+	exFn, okEx := hashmap.Get[extractionFn[T]](r.extractionFns)
+	sortFn, okSort := hashmap.Get[sortFn[T]](r.sortFns)
+	if !okEx {
+		log.LogError(w, missingExFnErr,
+			log.F("function", "AddRenderFn"),
+			log.F("type", reflect.TypeFor[T]().String()),
+		)
+		return
+	}
+	if !okSort {
+		log.LogError(w, missingSortFnErr,
+			log.F("function", "AddRenderFn"),
+			log.F("type", reflect.TypeFor[T]().String()),
+		)
 		return
 	}
 
@@ -134,17 +180,6 @@ func AddRenderFn[C, T any](w *ecs.World, stage RenderStage, fn renderFn[C, T]) {
 	}
 	batchId := len(r.batches)
 	r.batches = append(r.batches, newBatch)
-
-	exFn, okEx := hashmap.Get[extractionFn[T]](r.extractionFns)
-	sortFn, okSort := hashmap.Get[sortFn[T]](r.sortFns)
-	if !okEx {
-		log.LogError(w, missingExFnErr, log.F("function", "AddRenderFn"), log.F("type", reflect.TypeFor[T]().String()))
-		return
-	}
-	if !okSort {
-		log.LogError(w, missingSortFnErr, log.F("function", "AddRenderFn"), log.F("type", reflect.TypeFor[T]().String()))
-		return
-	}
 
 	_, ok = r.renderFns[stage]
 	if !ok {

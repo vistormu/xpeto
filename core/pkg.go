@@ -5,19 +5,18 @@ import (
 	"github.com/vistormu/xpeto/core/schedule"
 	"github.com/vistormu/xpeto/core/window"
 
+	"github.com/vistormu/xpeto/core/clock"
 	"github.com/vistormu/xpeto/core/event"
 	"github.com/vistormu/xpeto/core/log"
-	"github.com/vistormu/xpeto/core/time"
+	"github.com/vistormu/xpeto/core/log/sink"
 )
 
 type Pkg = func(*ecs.World, *schedule.Scheduler)
 
 func CorePkgs(w *ecs.World, sch *schedule.Scheduler) {
-	// core: no internal dependencies
 	event.Pkg(w, sch)
-	time.Pkg(w, sch)
+	clock.Pkg(w, sch)
 	window.Pkg(w, sch)
-
-	// features: depends on core packages
 	log.Pkg(w, sch)
+	log.AddSink(w, &sink.TerminalSink{})
 }

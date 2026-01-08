@@ -5,7 +5,8 @@ import (
 	"github.com/vistormu/xpeto/core/schedule"
 )
 
+type BackendFactory = func(*ecs.World, *schedule.Scheduler) (Backend, error)
+
 type Backend interface {
-	Init(w *ecs.World, sch *schedule.Scheduler)
 	Run() error
 }

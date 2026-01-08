@@ -1,9 +1,9 @@
 package render
 
-type Anchor uint8
+type AnchorType uint8
 
 const (
-	AnchorCenter Anchor = iota
+	AnchorCenter AnchorType = iota
 	AnchorTopLeft
 	AnchorTop
 	AnchorTopRight
@@ -13,3 +13,7 @@ const (
 	AnchorBottom
 	AnchorBottomRight
 )
+
+type Anchor struct {
+	Type AnchorType
+}

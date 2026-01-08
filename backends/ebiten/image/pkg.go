@@ -8,7 +8,7 @@ import (
 	"github.com/vistormu/xpeto/pkg/render"
 )
 
-func Pkg(w *ecs.World, sch *schedule.Scheduler) {
+func Pkg(w *ecs.World, _ *schedule.Scheduler) {
 	asset.AddLoaderFn(w, load, ".png", ".jpg", ".jpeg")
 
 	render.AddExtractionFn[ebiten.Image](w, extractSprite)

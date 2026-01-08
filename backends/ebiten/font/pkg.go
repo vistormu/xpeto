@@ -6,10 +6,12 @@ import (
 	"github.com/vistormu/xpeto/core/schedule"
 	"github.com/vistormu/xpeto/pkg/asset"
 	"github.com/vistormu/xpeto/pkg/render"
+	"github.com/vistormu/xpeto/pkg/text"
 )
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	asset.AddLoaderFn(w, load, ".ttf")
+	asset.AddAsset[text.DefaultFont](w)
 
 	render.AddExtractionFn[ebiten.Image](w, extractText)
 	render.AddSortFn[ebiten.Image](w, sortText)

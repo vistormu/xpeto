@@ -15,9 +15,6 @@ var runCmd = &cobra.Command{
 		path := args[0]
 
 		goArgs := []string{"run"}
-		if headless {
-			goArgs = append(goArgs, "-tags=headless")
-		}
 		goArgs = append(goArgs, path)
 
 		c := exec.Command("go", goArgs...)

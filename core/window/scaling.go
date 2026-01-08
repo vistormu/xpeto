@@ -17,26 +17,46 @@ type Scaling struct {
 	SnapPixels bool
 }
 
+func newScaling() Scaling {
+	return Scaling{
+		Mode:       ScalingInteger,
+		SnapPixels: true,
+	}
+}
+
 // ===
 // API
 // ===
 func SetScalingMode(w *ecs.World, mode ScalingMode) {
-	s, _ := ecs.GetResource[Scaling](w)
+	s, ok := ecs.GetResource[Scaling](w)
+	if !ok {
+		return
+	}
 	s.Mode = mode
 }
 
 func SetPixelSnap(w *ecs.World, v bool) {
-	s, _ := ecs.GetResource[Scaling](w)
+	s, ok := ecs.GetResource[Scaling](w)
+	if !ok {
+		return
+	}
 	s.SnapPixels = v
 }
 
 func GetDesiredVirtualSize(w *ecs.World) (vw, vh int, ok bool) {
-	sc, _ := ecs.GetResource[Scaling](w)
-	if sc.Mode != ScalingHiDPI {
+	s, ok := ecs.GetResource[Scaling](w)
+	if !ok {
+		return
+	}
+	if s.Mode != ScalingHiDPI {
 		return 0, 0, false
 	}
 
-	obs, _ := ecs.GetResource[RealWindowObserved](w)
+	obs, ok := ecs.GetResource[RealWindowObserved](w)
+	if !ok {
+		return
+	}
+
 	vw = int(float64(obs.Width)*obs.DeviceScale + 0.5)
 	vh = int(float64(obs.Height)*obs.DeviceScale + 0.5)
 

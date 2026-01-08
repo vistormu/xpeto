@@ -1,6 +1,8 @@
 package ecs
 
 import (
+	"reflect"
+
 	"github.com/vistormu/go-dsa/hashmap"
 )
 
@@ -13,25 +15,47 @@ type store[T any] struct {
 	location map[Entity]int
 }
 
-func newStore[T any]() *store[T] {
-	return &store[T]{
+func newStore[T any]() store[T] {
+	return store[T]{
 		dense:    make([]Entity, 0),
 		values:   make([]T, 0),
 		location: make(map[Entity]int),
 	}
 }
 
-func (s *store[T]) add(e Entity, v T) {
+func (s *store[T]) add(e Entity, c T) {
 	row, ok := s.location[e]
 	if ok {
-		s.values[row] = v
+		s.values[row] = c
 		return
 	}
 
-	row = len(s.dense)
+	s.location[e] = len(s.dense)
 	s.dense = append(s.dense, e)
-	s.values = append(s.values, v)
-	s.location[e] = row
+	s.values = append(s.values, c)
+}
+
+func (s *store[T]) remove(e Entity) bool {
+	row, ok := s.location[e]
+	if !ok {
+		return false
+	}
+
+	last := len(s.dense) - 1
+	lastE := s.dense[last]
+
+	s.dense[row] = s.dense[last]
+	s.values[row] = s.values[last]
+
+	s.dense = s.dense[:last]
+	s.values = s.values[:last]
+
+	delete(s.location, e)
+	if row != last {
+		s.location[lastE] = row
+	}
+
+	return true
 }
 
 func (s *store[T]) get(e Entity) (*T, bool) {
@@ -42,41 +66,23 @@ func (s *store[T]) get(e Entity) (*T, bool) {
 	return &s.values[row], true
 }
 
-func (s *store[T]) remove(e Entity) bool {
-	row, ok := s.location[e]
-	if !ok {
-		return false
-	}
-
-	last := len(s.dense) - 1
-	if row != last {
-		le := s.dense[last]
-		s.dense[row] = le
-		s.values[row] = s.values[last]
-		s.location[le] = row
-	}
-
-	s.dense = s.dense[:last]
-	s.values = s.values[:last]
-
-	delete(s.location, e)
-
-	return true
+func (s *store[T]) has(e Entity) bool {
+	_, ok := s.location[e]
+	return ok
 }
 
 // ========
 // registry
 // ========
 func getStore[T any](r *hashmap.TypeMap) *store[T] {
-	s, ok := hashmap.Get[store[T]](r)
-	if ok {
-		return s
+	_, ok := hashmap.Get[store[T]](r)
+	if !ok {
+		hashmap.Add(r, newStore[T]())
 	}
 
-	ns := newStore[T]()
-	hashmap.Add(r, ns)
+	s, _ := hashmap.Get[store[T]](r)
 
-	return ns
+	return s
 }
 
 // TODO: the complexity is O(c), where c is the number of components
@@ -94,9 +100,66 @@ func removeComponents(r *hashmap.TypeMap, e Entity) bool {
 	return removed
 }
 
-// =================
-// helper components
-// =================
-type Name struct {
-	Value string
+// ===
+// API
+// ===
+func AddComponent[T any](w *World, e Entity, c T) bool {
+	if !w.population.has(e) {
+		return false
+	}
+
+	if reflect.TypeFor[T]().Kind() == reflect.Pointer {
+		return false
+	}
+
+	getStore[T](w.registry).add(e, c)
+
+	return true
 }
+
+func RemoveComponent[T any](w *World, e Entity) bool {
+	if !w.population.has(e) {
+		return false
+	}
+
+	return getStore[T](w.registry).remove(e)
+}
+
+func GetComponent[T any](w *World, e Entity) (*T, bool) {
+	if !w.population.has(e) {
+		return nil, false
+	}
+
+	return getStore[T](w.registry).get(e)
+}
+
+func HasComponent[T any](w *World, e Entity) bool {
+	if !w.population.has(e) {
+		return false
+	}
+	return getStore[T](w.registry).has(e)
+}
+
+// func ReserveComponents[T any](w *World, n int) {
+// 	if n <= 0 {
+// 		return
+// 	}
+
+// 	s := getStore[T](w.registry)
+
+// 	if cap(s.dense) < n {
+// 		d := make([]Entity, len(s.dense), n)
+// 		copy(d, s.dense)
+// 		s.dense = d
+// 	}
+
+// 	if cap(s.values) < n {
+// 		v := make([]T, len(s.values), n)
+// 		copy(v, s.values)
+// 		s.values = v
+// 	}
+
+// 	if s.location == nil {
+// 		s.location = make(map[Entity]int, n)
+// 	}
+// }

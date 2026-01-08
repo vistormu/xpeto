@@ -7,10 +7,16 @@ import (
 
 func Pkg(w *ecs.World, sch *schedule.Scheduler) {
 	// resources
-	l := newLogger()
-	l.sinks = append(l.sinks, &debugSink{})
+	s := newLoggerSettings()
+	l := newLogger(s)()
 	ecs.AddResource(w, l)
+	ecs.AddResource(w, s)
 
 	// systems
-	schedule.AddSystem(sch, schedule.Last, flush).Label("log.flush")
+	schedule.AddSystem(sch, schedule.Last, flush,
+		schedule.SystemOpt.Label("log.flush"),
+	)
+	schedule.AddSystem(sch, schedule.Exit, flush,
+		schedule.SystemOpt.Label("log.flush_exit"),
+	)
 }

@@ -11,20 +11,40 @@ import (
 	"github.com/vistormu/xpeto/core/window"
 )
 
+// =======
+// backend
+// =======
+func Backend(w *ecs.World, sch *schedule.Scheduler) (app.Backend, error) {
+	game := &game{
+		w:   w,
+		sch: sch,
+	}
+
+	corePkgs(game.w, game.sch)
+
+	return game, nil
+}
+
+// ======
+// screen
+// ======
 type screenBuffer struct {
 	screen *ebiten.Image
 	w, h   int
 }
 
+// ====
+// game
+// ====
 type game struct {
 	w   *ecs.World
 	sch *schedule.Scheduler
 }
 
 func (g *game) Update() error {
-	g.sch.RunUpdate(g.w)
+	schedule.RunUpdate(g.w, g.sch)
 
-	_, ok := event.GetEvents[app.ExitApp](g.w)
+	_, ok := event.GetEvents[app.ExitAppEvent](g.w)
 	if ok {
 		return ebiten.Termination
 	}
@@ -45,7 +65,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// draw
 	sb.screen.Clear()
 	ecs.AddResource(g.w, sb.screen)
-	g.sch.RunDraw(g.w)
+	schedule.RunDraw(g.w, g.sch)
 	ecs.RemoveResource[ebiten.Image](g.w)
 
 	// update viewport
@@ -78,4 +98,8 @@ func (g *game) Layout(outsideW, outsideH int) (int, int) {
 	// w, h := window.GetVirtualWindowSize[int](g.w)
 
 	return outsideW, outsideH
+}
+
+func (g *game) Run() error {
+	return ebiten.RunGame(g)
 }
